@@ -2,8 +2,9 @@
   "name": "cama",
   "version": "1.0.0",
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.0",
-    "@eslint/js": "^9.22.0",
-    "globals": "^16.0.0"
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "globals": "^17.4.0"
   }
 }

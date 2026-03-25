@@ -1,17 +1,7 @@
 import { defineConfig } from "eslint/config";
 import globals from "globals";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-    baseDirectory: __dirname,
-    recommendedConfig: js.configs.recommended,
-    allConfig: js.configs.all
-});
+import stylistic from "@stylistic/eslint-plugin";
 
 // ESLint configuration
 //
@@ -19,40 +9,55 @@ const compat = new FlatCompat({
 // your team's JavaScript style is followed by everyone. See the ESLint
 // documentation for more information: https://eslint.org/docs/latest/use/configure/
 
+const commonRules = {
+  // Core best practices
+  "camelcase": ["error"],
+  "no-use-before-define": ["error", {
+    allowNamedExports: true,
+  }],
+  "no-var": ["error"],
 
-export default defineConfig([{
-    extends: compat.extends("eslint:recommended"),
+  // Stylistic rules
+  "stylistic/comma-dangle": ["error", "always-multiline"],
+  "stylistic/comma-spacing": ["error", {
+    before: false,
+    after: true,
+  }],
+  "stylistic/indent": ["error", 2],
+  "stylistic/no-trailing-spaces": ["error"],
+  "stylistic/object-curly-spacing": ["error", "always"],
+  "stylistic/semi": ["error", "always", {
+    omitLastInOneLineBlock: true,
+  }],
+};
 
+export default defineConfig([
+  // Rules for Node.js files located in the root directory and tasks directory
+  {
+    extends: ['js/recommended'],
+    files: ["*.mjs", "tasks/**/*.mjs", "tasks/**/*.js"],
+    plugins: { js, stylistic },
+    rules: commonRules,
     languageOptions: {
-        globals: {
-            ...globals.node,
-            ...globals.browser,
-        },
-
-        ecmaVersion: "latest",
-        sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+      ecmaVersion: "latest",
+      sourceType: "module",
     },
-
-    rules: {
-        camelcase: ["error"],
-        "comma-dangle": ["error", "always-multiline"],
-
-        "comma-spacing": ["error", {
-            before: false,
-            after: true,
-        }],
-
-        "no-trailing-spaces": ["error"],
-
-        "no-use-before-define": ["error", {
-            allowNamedExports: true,
-        }],
-
-        "no-var": ["error"],
-        "object-curly-spacing": ["error", "always"],
-
-        semi: ["error", "always", {
-            omitLastInOneLineBlock: true,
-        }],
+  },
+  // Rules for browser-based JavaScript files located in the ui directory
+  {
+    extends: ['js/recommended'],
+    files: ["ui/**/*.js"],
+    plugins: { js, stylistic },
+    rules: commonRules,
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+      ecmaVersion: "latest",
+      sourceType: "module",
     },
-}]);
+  },
+]);

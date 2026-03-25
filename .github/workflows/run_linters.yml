@@ -36,10 +36,6 @@ jobs:
     name: Lint JavaScript
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ui
-
     steps:
     - name: Check out the code
       uses: actions/checkout@v3
@@ -52,11 +48,11 @@ jobs:
 
     - name: Install dependencies
       run: |
-        npm install
+        npm install --include=dev
 
     - name: Run ESLint
       run: |
-        npx eslint . --ext .js --max-warnings 0 --fix
+        npx eslint . --ext .js --max-warnings 0
 
   lint-css:
     # Use stylelint to lint CSS code
