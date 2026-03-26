@@ -1,0 +1,119 @@
+# Cloud Workflow for CAMA data pipeline.
+# This workflow orchestrates extract, prepare, and load steps for all datasets.
+# Each dataset pipeline runs in parallel, with sequential steps within each pipeline.
+#
+# Usage:
+#   Deploy: gcloud workflows deploy data-pipeline --location=us-east4 --source=tasks/workflows/data_pipeline.yaml
+#   Execute: gcloud workflows run data-pipeline --location=us-east4
+
+main:
+  params: []
+  steps:
+    - init:
+        assign:
+          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - region: "us-east4"
+          - base_url: ${"https://" + region + "-" + project_id + ".cloudfunctions.net"}
+
+    - run_pipelines_in_parallel:
+        parallel:
+          shared: []
+          branches:
+            # OPA Properties
+            - opa_properties_pipeline:
+                steps:
+                  - extract_opa_properties:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/extract-opa-properties"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: extract_opa_properties_result
+
+                  - prepare_opa_properties:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/prepare-opa-properties"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: prepare_opa_properties_result
+
+                  - load_opa_properties:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/load-opa-properties"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: load_opa_properties_result
+
+            # OPA Assessments
+            - opa_assessments_pipeline:
+                steps:
+                  - extract_opa_assessments:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/extract-opa-assessments"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: extract_opa_assessments_result
+
+                  - prepare_opa_assessments:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/prepare-opa-assessments"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: prepare_opa_assessments_result
+
+                  - load_opa_assessments:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/load-opa-assessments"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: load_opa_assessments_result
+
+            # PWD Parcels
+            - pwd_parcels_pipeline:
+                steps:
+                  - extract_pwd_parcels:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/extract-pwd-parcels"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: extract_pwd_parcels_result
+
+                  - prepare_pwd_parcels:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/prepare-pwd-parcels"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: prepare_pwd_parcels_result
+
+                  - load_pwd_parcels:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/load-pwd-parcels"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: load_pwd_parcels_result
+
+    - return_success:
+        return:
+          status: "SUCCESS"
+          message: "YIPPEE! All data pipelines completed successfully."
+          results:
+            opa_properties: "Completed"
+            opa_assessments: "Completed"
+            pwd_parcels: "Completed"

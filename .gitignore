@@ -10,6 +10,8 @@ node_modules/
 
 # Data
 data/
+.ruff_cache/
+tasks/.ruff_cache/
 
 # Sensitive files
 keys/
