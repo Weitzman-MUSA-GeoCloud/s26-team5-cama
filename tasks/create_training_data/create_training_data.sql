@@ -22,8 +22,7 @@ SELECT
     total_area,
     total_livable_area,
     year_built,
-    DATE_DIFF(CURRENT_DATE(), DATE(CAST(year_built AS STRING) || '-01-01'), YEAR)
-        AS property_age,
+    EXTRACT(YEAR FROM CURRENT_DATE()) - CAST(year_built AS INT64) AS property_age,
     number_of_bedrooms,
     number_of_bathrooms,
     exterior_condition,
@@ -34,8 +33,7 @@ SELECT
     zoning,
     building_code_new,
     building_code_description_new,
-    census_tract,
-    geometry
+    census_tract
 FROM `{project_id}.core.opa_properties` AS p
 WHERE
     sale_price > 1
