@@ -6,6 +6,10 @@ This folder contains the Cloud Functions and Workflows for the Philadelphia Comp
 
 ```
 tasks/
+|── config-cors/                # Set up CORS configuration for the public bucket
+|   ├── main.py
+│   └── requirements.txt
+|
 ├── extract_opa_properties/     # Extract OPA Properties from CARTO API.
 │   ├── main.py
 │   └── requirements.txt
@@ -58,6 +62,12 @@ Deploy each Cloud Function using the `gcloud` CLI. The functions use default cre
 ```pwsh
 # Log in first.
 gcloud auth login
+
+# Establish CORS configuration for musa5090s26-team5-public bucket.
+gcloud storage buckets update gs://musa5090s26-team5-public --cors-file=tasks/config-cors/cors.json
+
+# Validate the CORS json is in the public bucket.
+gcloud storage buckets describe gs://musa5090s26-team5-public
 
 # Extract functions.
 gcloud functions deploy extract-opa-properties `
