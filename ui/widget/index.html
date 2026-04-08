@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valuation History</title>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap"
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="widget-container">
+    <!-- OPA ID Lookup -->
+    <div class="lookup-bar">
+      <label for="opa-id-input">Look up a property</label>
+      <div class="lookup-input-group">
+        <input
+          type="text"
+          id="opa-id-input"
+          placeholder="Enter OPA Account Number"
+          autocomplete="off"
+        />
+        <button type="button" id="lookup-btn">Search</button>
+      </div>
+    </div>
+
+    <!-- Widget Content -->
+    <section class="valuation-history">
+      <h2 class="section-heading">
+        Valuation History
+        <span class="record-count" id="record-count">(0)</span>
+      </h2>
+
+      <p class="section-description">
+        Taxable and exempt land values can represent the contributory value of
+        land in relation to the total market value, or were no structure is
+        present, the value of vacant land. (Consistent with <a href="">International
+        Association of Assessing Officers (IAAO) standards</a>, the value of an
+        improved parcel is separated into the portion of value attributed to
+        the improvement and the portion of value attributed to the land.)
+      </p>
+
+      <!-- Chart Area -->
+      <div class="chart-wrapper">
+        <div class="chart-container" id="valuation-chart">
+          <div class="chart-placeholder">
+            <p class="chart-placeholder-text">
+              Enter an OPA account number above to view the valuation history chart.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="table-wrapper">
+        <table class="valuation-table" id="valuation-table">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Market Value</th>
+              <th>Taxable Land</th>
+              <th>Taxable Improvement</th>
+              <th>Exempt Land</th>
+              <th>Exempt Improvement</th>
+            </tr>
+          </thead>
+          <tbody id="valuation-table-body">
+            <!-- Example rows (will be populated dynamically) -->
+            <tr>
+              <td>2023</td>
+              <td>$152,000</td>
+              <td>$30,400</td>
+              <td>$121,600</td>
+              <td>$0</td>
+              <td>$0</td>
+            </tr>
+            <tr>
+              <td>2022</td>
+              <td>$46,000</td>
+              <td>$6,900</td>
+              <td>$39,100</td>
+              <td>$0</td>
+              <td>$0</td>
+            </tr>
+            <tr>
+              <td>2021</td>
+              <td>$46,000</td>
+              <td>$6,900</td>
+              <td>$39,100</td>
+              <td>$0</td>
+              <td>$0</td>
+            </tr>
+            <tr>
+              <td>2020</td>
+              <td>$46,000</td>
+              <td>$6,900</td>
+              <td>$39,100</td>
+              <td>$0</td>
+              <td>$0</td>
+            </tr>
+            <tr>
+              <td>2019</td>
+              <td>$74,800</td>
+              <td>$11,200</td>
+              <td>$63,600</td>
+              <td>$0</td>
+              <td>$0</td>
+            </tr>
+            <tr>
+              <td>2018</td>
+              <td>$57,600</td>
+              <td>$8,640</td>
+              <td>$48,960</td>
+              <td>$0</td>
+              <td>$0</td>
+            </tr>
+            <tr>
+              <td>2017</td>
+              <td>$57,600</td>
+              <td>$8,640</td>
+              <td>$48,960</td>
+              <td>$0</td>
+              <td>$0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</body>
+
+</html>

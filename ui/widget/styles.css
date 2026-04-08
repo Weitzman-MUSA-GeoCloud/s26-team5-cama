@@ -1,0 +1,178 @@
+/* Reset & Base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  color: #232323;
+  background: #D8D7B1;
+}
+
+a {
+  color: #F2541B;
+}
+
+a:hover {
+  color: #c23d0e;
+}
+
+strong, b {
+  color: #F2541B;
+}
+
+/* Widget Container */
+
+.widget-container {
+  max-width: 820px;
+  margin: 32px auto;
+  background: #fff;
+  border: 1px solid #cfcfcf;
+}
+
+/* OPA Lookup Bar */
+
+.lookup-bar {
+  background: #2C3968;
+  color: #fff;
+  padding: 16px 20px;
+}
+
+.lookup-bar label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.lookup-input-group {
+  display: flex;
+  gap: 0;
+}
+
+.lookup-input-group input {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.lookup-input-group input::placeholder {
+  color: #999;
+}
+
+.lookup-input-group button {
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: #F2BC1B;
+  color: #232323;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lookup-input-group button:hover {
+  background: #F2541B;
+  color: #fff;
+}
+
+/* Valuation History Section */
+
+.valuation-history {
+  padding: 20px;
+}
+
+.section-heading {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2C3968;
+  border-bottom: 2px solid #F2BC1B;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+.record-count {
+  font-weight: 400;
+  color: #888;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #232323;
+  margin-bottom: 20px;
+}
+
+/* Chart */
+
+.chart-wrapper {
+  margin-bottom: 24px;
+}
+
+.chart-container {
+  width: 100%;
+  min-height: 200px;
+  border: 1px solid #e0e0e0;
+  border-radius: 2px;
+  position: relative;
+}
+
+.chart-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.chart-placeholder-text {
+  font-size: 0.85rem;
+  color: #999;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* Data Table */
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.valuation-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.valuation-table thead th {
+  background: #2C3968;
+  color: #fff;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+
+.valuation-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  white-space: nowrap;
+}
+
+.valuation-table tbody tr:nth-child(even) {
+  background: #f4f3e8;
+}
+
+.valuation-table tbody tr:hover {
+  background: #D8D7B1;
+}
