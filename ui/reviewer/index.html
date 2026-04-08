@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mass Appraisal Reviewer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="layout">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <h1>Mass Appraisal Reviewer</h1>
+
+      <div class="summary">
+        <p>
+          There were <strong>350,626</strong> properties that
+          increased in <a href="">assessed value since the last mass appraisal</a>.
+          Overall, each property assessment changed by an
+          <strong>increase of 23.6% on average</strong>.
+        </p>
+      </div>
+
+      <section class="chart-section">
+        <h2>Current Assessment Value Distribution&hellip;</h2>
+        <div class="chart-container" id="value-distribution-chart">
+          <div class="chart-placeholder">
+            <span class="chart-y-label"># Properties</span>
+            <div class="chart-area"></div>
+            <div class="chart-x-labels">
+              <span>$5,000</span>
+              <span>$3,500,000</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="chart-section">
+        <h2>Percent Change Since Last Assessment&hellip;</h2>
+        <div class="chart-container" id="pct-change-chart">
+          <div class="chart-placeholder">
+            <span class="chart-y-label"># Properties</span>
+            <div class="chart-area"></div>
+            <div class="chart-x-labels">
+              <span>-50%</span>
+              <span>0%</span>
+              <span>200%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Main Map Area -->
+    <main class="map-area">
+      <div class="map-controls">
+        <fieldset>
+          <legend class="visually-hidden">Map Layers</legend>
+          <label>
+            <input type="checkbox" name="layer" value="current-absolute" />
+            Current Absolute Assessment $ Values
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="tax-year-absolute" />
+            Tax Year 2023 Absolute Assessment $ Values
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="pct-change" checked />
+            Change (%) in Assessment Since Tax Year 2023
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="dollar-change" />
+            Change ($) in Assessment Since Tax Year 2023
+          </label>
+        </fieldset>
+      </div>
+
+      <div id="map"></div>
+
+      <!-- Example property popup (hidden by default, shown on click) -->
+      <div class="property-popup" id="property-popup" hidden>
+        <h3 class="popup-address">1234 Sesame St</h3>
+        <table class="popup-details">
+          <tr>
+            <td class="popup-label">Current:</td>
+            <td class="popup-value">$275,400</td>
+          </tr>
+          <tr>
+            <td class="popup-label">2023:</td>
+            <td class="popup-value">$225,200</td>
+          </tr>
+          <tr>
+            <td class="popup-label">Change:</td>
+            <td class="popup-value popup-change-up">&uarr; 22.3%</td>
+          </tr>
+        </table>
+      </div>
+    </main>
+  </div>
+</body>
+
+</html>
