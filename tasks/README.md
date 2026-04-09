@@ -43,6 +43,10 @@ tasks/
 │   ├── requirements.txt
 │   ├── source_pwd_parcels.sql
 │   └── core_pwd_parcels.sql
+│── tax_year_bins/
+│   └── main.py
+│   └── requirements.txt
+│   └── tax_year_assessment_bins.sql
 ├── workflows/
 │   └── data_pipeline.yaml      # Orchestration workflow.
 ├── deploy.ps1                  # PowerShell deployment script.
