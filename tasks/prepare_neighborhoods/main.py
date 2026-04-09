@@ -15,7 +15,6 @@ import functions_framework
 import os
 from google.cloud import storage
 from dotenv import load_dotenv
-import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
 import io
