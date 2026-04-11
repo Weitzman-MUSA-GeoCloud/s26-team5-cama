@@ -1,0 +1,12 @@
+[
+  {"lower_bound": 0, "upper_bound": 100000, "property_count": 120000},
+  {"lower_bound": 100000, "upper_bound": 200000, "property_count": 95000},
+  {"lower_bound": 200000, "upper_bound": 300000, "property_count": 62000},
+  {"lower_bound": 300000, "upper_bound": 400000, "property_count": 38000},
+  {"lower_bound": 400000, "upper_bound": 500000, "property_count": 22000},
+  {"lower_bound": 500000, "upper_bound": 750000, "property_count": 15000},
+  {"lower_bound": 750000, "upper_bound": 1000000, "property_count": 8500},
+  {"lower_bound": 1000000, "upper_bound": 2000000, "property_count": 4200},
+  {"lower_bound": 2000000, "upper_bound": 3500000, "property_count": 1800},
+  {"lower_bound": 3500000, "upper_bound": 999999999, "property_count": 600}
+]

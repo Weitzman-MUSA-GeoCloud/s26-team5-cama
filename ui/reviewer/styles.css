@@ -1,4 +1,10 @@
-/* Reset & Base */
+/* Reviewer UI: styles.css
+   Assessment review dashboard for tax assessors.
+   Layout: fixed-width sidebar (charts + summary) | flex-fill map area */
+
+/* Reset and Base
+   Normalizes box model and removes browser default spacing
+   so layout behaves consistently across browsers. */
 
 *,
 *::before,
@@ -9,32 +15,37 @@
 }
 
 html, body {
-  height: 100%;
+  height: 100%; /* Required so the full-viewport flex layout works. */
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: #232323;
   background: #fff;
 }
 
 a {
-  color: #F2541B;
+  color: #F2541B; /* Orange. */
 }
 
 a:hover {
-  color: #c23d0e;
+  color: #c23d0e; /* Darker shade for contrast on hover. */
 }
 
 strong, b {
-  color: #F2541B;
+  color: #F2541B; /* Brand orange for bold text. */
 }
 
-/* Layout */
+/* Layout
+   Two-column flex row. Sidebar on left, map fills rest.
+   100vh keeps the entire UI within one screen with no page scroll. */
 
 .layout {
   display: flex;
   height: 100vh;
 }
 
-/* Sidebar */
+/* Sidebar
+   Fixed-width panel containing title, summary stats, and charts.
+   flex-shrink: 0 prevents sidebar from collapsing as map grows.
+   overflow-y: auto lets chart content scroll if window is short. */
 
 .sidebar {
   width: 360px;
@@ -49,7 +60,7 @@ strong, b {
 .sidebar h1 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #2C3968;
+  color: #2C3968; /* Navy. */
   margin-bottom: 16px;
 }
 
@@ -59,7 +70,9 @@ strong, b {
   font-size: 0.95rem;
 }
 
-/* Chart Sections */
+/* Chart Sections
+   Placeholder layout used before a charting library replaces .chart-placeholder with a real chart canvas.
+   y-label is rotated vertically to sit flush against chart edge. */
 
 .chart-section {
   margin-bottom: 28px;
@@ -67,7 +80,7 @@ strong, b {
 
 .chart-section h2 {
   font-size: 0.85rem;
-  font-weight: 400;
+  font-weight: 400; /* Light weight to read as a label, not a heading. */
   color: #555;
   margin-bottom: 8px;
 }
@@ -77,7 +90,7 @@ strong, b {
 }
 
 .chart-placeholder {
-  position: relative;
+  position: relative; /* Needed to absolutely position y-axis label. */
   display: flex;
   flex-direction: column;
 }
@@ -85,7 +98,7 @@ strong, b {
 .chart-y-label {
   font-size: 0.7rem;
   color: #888;
-  writing-mode: vertical-rl;
+  writing-mode: vertical-rl; /* Rotate text to run bottom-to-top. */
   transform: rotate(180deg);
   position: absolute;
   left: 0;
@@ -94,8 +107,8 @@ strong, b {
 
 .chart-area {
   height: 100px;
-  margin-left: 24px;
-  background: #D8D7B1;
+  margin-left: 24px; /* Leaves space for rotated y-axis label. */
+  background: #D8D7B1; /* Warm grey placeholder fill. */
   border-radius: 4px;
   border-bottom: 1px solid #ccc;
   border-left: 1px solid #ccc;
@@ -103,34 +116,43 @@ strong, b {
 
 .chart-x-labels {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* Pin min label left, max label right. */
   margin-left: 24px;
   margin-top: 4px;
   font-size: 0.7rem;
   color: #888;
 }
 
-/* Map Area */
+/* Map Area
+   Fills all remaining horizontal space after sidebar.
+   Position: relative creates a stacking context so that absolutely
+   positioned children (controls, popup) layer correctly over the map.
+   Background color shows briefly before MapLibre tiles load. */
 
 .map-area {
   flex: 1;
   position: relative;
-  background: #e8e0d8;
+  background: #e8e0d8; /* Warm grey tile-loading fallback. */
 }
 
+/* MapLibre GL JS mounts its <canvas> inside this element.
+   Must be 100% x 100% so the canvas fills the available area. */
 #map {
   width: 100%;
   height: 100%;
 }
 
-/* Map Controls (Layer Toggles) */
+/* Map Controls (Layer Toggles)
+   Floating panel anchored to top-right corner of map.
+   z-index 1000 keeps it above MapLibre GL canvas (z-index 0).
+   Semi-transparent white background lets map context show through. */
 
 .map-controls {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 1000;
-  background: rgb(255 255 255 / 95%);
+  background: rgb(255 255 255 / 95%); /* Semi-transparent white. */
   border: 1px solid #ccc;
   border-radius: 4px;
   padding: 10px 14px;
@@ -139,7 +161,7 @@ strong, b {
 }
 
 .map-controls fieldset {
-  border: none;
+  border: none; /* <fieldset> has default border. Remove for clean styling */
 }
 
 .map-controls label {
@@ -147,11 +169,11 @@ strong, b {
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
-  cursor: pointer;
+  cursor: pointer; /* Entire label row is clickable, not just checkbox. */
 }
 
 .map-controls label:last-child {
-  margin-bottom: 0;
+  margin-bottom: 0; /* Remove trailing gap after last toggle. */
 }
 
 .map-controls input[type="checkbox"] {
@@ -160,7 +182,10 @@ strong, b {
   cursor: pointer;
 }
 
-/* Property Popup */
+/* Property Popup
+   Shown when user clicks a property on map.
+   Absolutely positioned over the map. Toggled via hidden attribute in JS.
+   Floated away from layer-toggle panel (bottom-right) to avoid overlap. */
 
 .property-popup {
   position: absolute;
@@ -182,7 +207,7 @@ strong, b {
 }
 
 .popup-details {
-  border-collapse: collapse;
+  border-collapse: collapse; /* Remove default cell spacing in details table. */
 }
 
 .popup-details td {
@@ -196,9 +221,10 @@ strong, b {
 }
 
 .popup-value {
-  text-align: right;
+  text-align: right; /* Align dollar values to right for easy scanning. */
 }
 
+/* Color-coded change indicators: navy = increase, orange = decrease. */
 .popup-change-up {
   color: #2C3968;
 }
@@ -207,8 +233,9 @@ strong, b {
   color: #F2541B;
 }
 
-/* Utility */
-
+/* Utility
+   Visually hides element while keeping accessible to screen readers.
+   Used on <legend> inside layer toggle fieldset. */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -219,4 +246,109 @@ strong, b {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/* Mobile Responsive
+   
+   Two breakpoints used:
+   - 768px for tablets in portrait and large phones in landscape.
+   - 480px for small phones (iPhone SE, Galaxy S series, Pixel, etc.).
+
+   Stack sidebar above map, shrink padding/font sizes, and reposition
+   floating panels so they don't obscure the map. MapLibre GL JS handles
+   touch/pinch-zoom natively apprently, so no JS changes needed. */
+
+/* Tablet / Small Laptop (≤ 768px)
+   Stack sidebar above map instead of side-by-side.
+   Sidebar becomes scrollable top panel capped at 40 vh. */
+@media (width <= 768px) {
+  .layout {
+    flex-direction: column; /* Sidebar on top, map below. */
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: unset; /* Remove desktop min. */
+    max-height: 40vh; /* Cap sidebar height so map stays visible. */
+    border-right: none;
+    border-bottom: 1px solid #ddd; /* Horizontal divider replaces vertical. */
+    padding: 16px 20px;
+  }
+
+  .sidebar h1 {
+    font-size: 1.25rem;
+  }
+
+  /* Map fills remaining viewport below sidebar. */
+  .map-area {
+    min-height: 50vh;
+  }
+
+  /* Shrink layer-toggle panel so it doesn't cover too much of map. */
+  .map-controls {
+    font-size: 0.75rem;
+    padding: 8px 10px;
+    max-width: 70vw; /* Prevent overflow on narrow screens. */
+  }
+
+  /* Move property popup to bottom-center for thumb reach. */
+  .property-popup {
+    right: 50%;
+    transform: translateX(50%);
+    bottom: 16px;
+    max-width: 85vw;
+  }
+}
+
+/* Small Phone (≤ 480px)
+   Tighten spacing. Reduce chart heights. */
+@media (width <= 480px) {
+  .sidebar {
+    padding: 12px 14px;
+    max-height: 35vh; /* Slightly less room for sidebar on small screens. */
+  }
+
+  .sidebar h1 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+
+  .summary {
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+  }
+
+  .chart-section {
+    margin-bottom: 18px;
+  }
+
+  .chart-section h2 {
+    font-size: 0.78rem;
+  }
+
+  /* Reduce chart placeholder height for small viewport. */
+  .chart-area {
+    height: 70px;
+  }
+
+  /* Stack labels vertically with smaller text. */
+  .map-controls {
+    font-size: 0.7rem;
+    padding: 6px 8px;
+    top: 8px;
+    right: 8px;
+    max-width: 80vw;
+  }
+
+  .map-controls label {
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  /* Popup fills most of screen width on small phones. */
+  .property-popup {
+    max-width: 92vw;
+    font-size: 0.8rem;
+    padding: 10px 12px;
+  }
 }
