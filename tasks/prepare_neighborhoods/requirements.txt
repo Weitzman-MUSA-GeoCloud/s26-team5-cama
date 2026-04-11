@@ -1,0 +1,4 @@
+functions-framework==3.*
+google-cloud-storage==2.*
+python-dotenv==1.*
+pyarrow==15.*

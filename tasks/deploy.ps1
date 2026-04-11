@@ -59,6 +59,34 @@ gcloud functions deploy extract-pwd-parcels `
     --memory=4GB `
     --no-allow-unauthenticated
 
+# Extract Neighborhoods.
+Write-Host "Deploying extract-neighborhoods."
+gcloud functions deploy extract-neighborhoods `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/extract_neighborhoods `
+    --entry-point=extract_neighborhoods `
+    --trigger-http `
+    --set-env-vars RAW_DATA_BUCKET=$RAW_DATA_BUCKET `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+# Extract SEPTA Stations.
+Write-Host "Deploying extract-septa."
+gcloud functions deploy extract-septa `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/extract_septa `
+    --entry-point=extract_septa `
+    --trigger-http `
+    --set-env-vars RAW_DATA_BUCKET=$RAW_DATA_BUCKET `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
 Write-Host "Prepare Functions" -ForegroundColor Green
 
 # Prepare OPA Properties.
@@ -103,6 +131,34 @@ gcloud functions deploy prepare-pwd-parcels `
     --memory=4GB `
     --no-allow-unauthenticated
 
+# Prepare Neighborhoods.
+Write-Host "Deploying prepare-neighborhoods."
+gcloud functions deploy prepare-neighborhoods `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/prepare_neighborhoods `
+    --entry-point=prepare_neighborhoods `
+    --trigger-http `
+    --set-env-vars "RAW_DATA_BUCKET=$RAW_DATA_BUCKET,PREPARED_DATA_BUCKET=$PREPARED_DATA_BUCKET" `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+# Prepare SEPTA Stations.
+Write-Host "Deploying prepare-septa."
+gcloud functions deploy prepare-septa `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/prepare_septa `
+    --entry-point=prepare_septa `
+    --trigger-http `
+    --set-env-vars "RAW_DATA_BUCKET=$RAW_DATA_BUCKET,PREPARED_DATA_BUCKET=$PREPARED_DATA_BUCKET" `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
 Write-Host "Load Functions" -ForegroundColor Green
 
 # Load OPA Properties.
@@ -141,6 +197,34 @@ gcloud functions deploy load-pwd-parcels `
     --region=$REGION `
     --source=tasks/load_pwd_parcels `
     --entry-point=load_pwd_parcels `
+    --trigger-http `
+    --set-env-vars DATA_LAKE_BUCKET=$PREPARED_DATA_BUCKET `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+# Load Neighborhoods.
+Write-Host "Deploying load-neighborhoods."
+gcloud functions deploy load-neighborhoods `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/load_neighborhoods `
+    --entry-point=load_neighborhoods `
+    --trigger-http `
+    --set-env-vars DATA_LAKE_BUCKET=$PREPARED_DATA_BUCKET `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+# Load SEPTA Stations.
+Write-Host "Deploying load-septa."
+gcloud functions deploy load-septa `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/load_septa `
+    --entry-point=load_septa `
     --trigger-http `
     --set-env-vars DATA_LAKE_BUCKET=$PREPARED_DATA_BUCKET `
     --timeout=1800s `

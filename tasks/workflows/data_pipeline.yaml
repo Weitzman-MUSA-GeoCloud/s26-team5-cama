@@ -109,6 +109,66 @@ main:
                         timeout: 1800
                       result: load_pwd_parcels_result
 
+            # Philadelphia Neighborhoods
+            - neighborhoods_pipeline:
+                steps:
+                  - extract_neighborhoods:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/extract-neighborhoods"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: extract_neighborhoods_result
+
+                  - prepare_neighborhoods:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/prepare-neighborhoods"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: prepare_neighborhoods_result
+
+                  - load_neighborhoods:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/load-neighborhoods"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: load_neighborhoods_result
+
+            # SEPTA
+            - septa_pipeline:
+                steps:
+                  - extract_septa:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/extract-septa"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: extract_septa_result
+
+                  - prepare_septa:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/prepare-septa"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: prepare_septa_result
+
+                  - load_septa:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/load-septa"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: load_septa_result
+
     - return_success:
         return:
           status: "SUCCESS"
@@ -117,3 +177,5 @@ main:
             opa_properties: "Completed"
             opa_assessments: "Completed"
             pwd_parcels: "Completed"
+            neighborhoods: "Completed"
+            septa: "Completed"

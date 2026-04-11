@@ -19,6 +19,12 @@ tasks/
 ├── extract_pwd_parcels/        # Extract PWD Parcels from ArcGIS Hub.
 │   ├── main.py
 │   └── requirements.txt
+├── extract_neighborhoods/      # Extract Philadelphia Neighborhoods as Parquet.
+│   ├── main.py
+│   └── requirements.txt
+├── extract_septa/              # Extract SEPTA Stations as CSV.
+│   ├── main.py
+│   └── requirements.txt
 ├── prepare_opa_properties/     # Prepare OPA Properties as GeoParquet.
 │   ├── main.py
 │   └── requirements.txt
@@ -26,6 +32,12 @@ tasks/
 │   ├── main.py
 │   └── requirements.txt
 ├── prepare_pwd_parcels/        # Prepare PWD Parcels as GeoParquet.
+│   ├── main.py
+│   └── requirements.txt
+├── prepare_neighborhoods/      # Prepare Philadelphia Neighborhoods as Parquet.
+│   ├── main.py
+│   └── requirements.txt
+├── prepare_septa/              # Prepare SEPTA Stations as Parquet.
 │   ├── main.py
 │   └── requirements.txt
 ├── load_opa_properties/        # Load OPA Properties into BigQuery.
@@ -43,6 +55,16 @@ tasks/
 │   ├── requirements.txt
 │   ├── source_pwd_parcels.sql
 │   └── core_pwd_parcels.sql
+├── load_neighborhoods/         # Load Philadelphia Neighborhoods into BigQuery.
+│   ├── main.py
+│   ├── requirements.txt
+│   ├── source_neighborhoods.sql
+│   └── core_neighborhoods.sql
+├── load_septa/                 # Load SEPTA Stations into BigQuery.
+│   ├── main.py
+│   ├── requirements.txt
+│   ├── source_septa.sql
+│   └── core_septa.sql
 │── tax_year_bins/
 │   └── main.py
 │   └── requirements.txt
@@ -110,6 +132,30 @@ gcloud functions deploy extract-pwd-parcels `
     --memory=4GB `
     --no-allow-unauthenticated
 
+gcloud functions deploy extract-neighborhoods `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/extract_neighborhoods `
+    --entry-point=extract_neighborhoods `
+    --trigger-http `
+    --set-env-vars RAW_DATA_BUCKET=musa5090s26-team5-raw_data `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+gcloud functions deploy extract-septa `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/extract_septa `
+    --entry-point=extract_septa `
+    --trigger-http `
+    --set-env-vars RAW_DATA_BUCKET=musa5090s26-team5-raw_data `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
 # Prepare functions.
 gcloud functions deploy prepare-opa-properties `
     --gen2 `
@@ -145,6 +191,30 @@ gcloud functions deploy prepare-pwd-parcels `
     --set-env-vars "RAW_DATA_BUCKET=musa5090s26-team5-raw_data,PREPARED_DATA_BUCKET=musa5090s26-team5-prepared_data" `
     --timeout=1800s `
     --memory=4GB `
+    --no-allow-unauthenticated
+
+gcloud functions deploy prepare-neighborhoods `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/prepare_neighborhoods `
+    --entry-point=prepare_neighborhoods `
+    --trigger-http `
+    --set-env-vars "RAW_DATA_BUCKET=musa5090s26-team5-raw_data,PREPARED_DATA_BUCKET=musa5090s26-team5-prepared_data" `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+gcloud functions deploy prepare-septa `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/prepare_septa `
+    --entry-point=prepare_septa `
+    --trigger-http `
+    --set-env-vars "RAW_DATA_BUCKET=musa5090s26-team5-raw_data,PREPARED_DATA_BUCKET=musa5090s26-team5-prepared_data" `
+    --timeout=1800s `
+    --memory=512MB `
     --no-allow-unauthenticated
 
 # Load functions.
@@ -183,6 +253,30 @@ gcloud functions deploy load-pwd-parcels `
     --timeout=1800s `
     --memory=512MB `
     --no-allow-unauthenticated
+
+gcloud functions deploy load-neighborhoods `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/load_neighborhoods `
+    --entry-point=load_neighborhoods `
+    --trigger-http `
+    --set-env-vars DATA_LAKE_BUCKET=musa5090s26-team5-prepared_data `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+gcloud functions deploy load-septa `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/load_septa `
+    --entry-point=load_septa `
+    --trigger-http `
+    --set-env-vars DATA_LAKE_BUCKET=musa5090s26-team5-prepared_data `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
 ```
 
 ## Workflow
@@ -208,16 +302,22 @@ Individual workflow runs:
 gcloud functions call extract-opa-properties --region=us-east4
 gcloud functions call extract-opa-assessments --region=us-east4
 gcloud functions call extract-pwd-parcels --region=us-east4
+gcloud functions call extract-neighborhoods --region=us-east4
+gcloud functions call extract-septa --region=us-east4
 
 # Prepare functions.
 gcloud functions call prepare-opa-properties --region=us-east4
 gcloud functions call prepare-opa-assessments --region=us-east4
 gcloud functions call prepare-pwd-parcels --region=us-east4
+gcloud functions call prepare-neighborhoods --region=us-east4
+gcloud functions call prepare-septa --region=us-east4
 
 # Load functions.
 gcloud functions call load-opa-properties --region=us-east4
 gcloud functions call load-opa-assessments --region=us-east4
 gcloud functions call load-pwd-parcels --region=us-east4
+gcloud functions call load-neighborhoods --region=us-east4
+gcloud functions call load-septa --region=us-east4
 ```
 
 Scheduler:
