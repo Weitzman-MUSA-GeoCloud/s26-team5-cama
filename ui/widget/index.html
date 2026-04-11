@@ -22,9 +22,13 @@
     <div class="lookup-bar">
       <label for="opa-id-input">Look up a property</label>
       <div class="lookup-input-group">
+        <!-- inputmode="numeric" shows numeric keyboard on mobile phones
+             since OPA account numbers are 9-10 digits. -->
         <input
           type="text"
           id="opa-id-input"
+          inputmode="numeric"
+          pattern="[0-9]*"
           placeholder="Enter OPA Account Number"
           autocomplete="off"
         />
