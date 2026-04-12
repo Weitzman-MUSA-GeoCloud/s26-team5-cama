@@ -1,10 +1,13 @@
 <!doctype html>
 <html lang="en">
 
+<!-- Property owner widget. Embeddable UI for looking up property's valuation history.
+     Intended to function like a component that could be dropped into atlas.phila.gov. -->
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Valuation History</title>
+  <!-- Open Sans matches Philadelphia city design standards (phila.gov). -->
   <link
     rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap"
@@ -14,13 +17,18 @@
 
 <body>
   <div class="widget-container">
-    <!-- OPA ID Lookup -->
+    <!-- OPA ID Lookup. User enters 9-10 digit OPA account number to fetch
+         assessment history. TO-DO: Replace with address autocomplete input. -->
     <div class="lookup-bar">
       <label for="opa-id-input">Look up a property</label>
       <div class="lookup-input-group">
+        <!-- inputmode="numeric" shows numeric keyboard on mobile phones
+             since OPA account numbers are 9-10 digits. -->
         <input
           type="text"
           id="opa-id-input"
+          inputmode="numeric"
+          pattern="[0-9]*"
           placeholder="Enter OPA Account Number"
           autocomplete="off"
         />
@@ -32,6 +40,7 @@
     <section class="valuation-history">
       <h2 class="section-heading">
         Valuation History
+        <!-- Record count is updated dynamically via JS after data is fetched. -->
         <span class="record-count" id="record-count">(0)</span>
       </h2>
 
@@ -44,9 +53,11 @@
         the improvement and the portion of value attributed to the land.)
       </p>
 
-      <!-- Chart Area -->
+      <!-- Chart Area. Placeholder replaced by bar/line chart (issue #18/#19)
+           once user performs lookup and data is fetched from API. -->
       <div class="chart-wrapper">
         <div class="chart-container" id="valuation-chart">
+          <!-- Shown before a lookup is performed. Hidden once chart renders. -->
           <div class="chart-placeholder">
             <p class="chart-placeholder-text">
               Enter an OPA account number above to view the valuation history chart.
@@ -69,7 +80,7 @@
             </tr>
           </thead>
           <tbody id="valuation-table-body">
-            <!-- Example rows (will be populated dynamically) -->
+            <!-- Example rows (will be populated dynamically). -->
             <tr>
               <td>2023</td>
               <td>$152,000</td>

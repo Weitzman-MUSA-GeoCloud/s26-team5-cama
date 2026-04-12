@@ -1,10 +1,15 @@
 <!doctype html>
 <html lang="en">
 
+<!-- Landing page. Links out to two main sub-applications. -->
 <head>
   <meta charset="utf-8" />
   <title>MUSA 5090 - CAMA Project</title>
 
+  <!--
+    Inline styles used here since this is a single-page landing with no
+    shared components. No external stylesheet is needed.
+  -->
   <style>
     body {
       font-family: sans-serif;
@@ -12,6 +17,7 @@
       padding: 0;
     }
 
+    /* Center nav cards vertically and horizontally on full viewport. */
     main {
       display: flex;
       flex-direction: column;
@@ -30,12 +36,14 @@
       gap: 1rem;
     }
 
+    /* Stack nav cards vertically on portrait-oriented screens (e.g. mobile) */
     @media (orientation: portrait) {
       nav {
         flex-direction: column;
       }
     }
 
+    /* Nav cards styled as clickable tiles. */
     a {
       display: block;
       padding: 2rem;
@@ -47,6 +55,7 @@
       transition: all 0.2s ease-in-out;
     }
 
+    /* Subtle lift effect on hover. */
     a:hover {
       background-color: #f5f5f5;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -58,6 +67,7 @@
 <body>
   <main>
     <h1>MUSA 5090 - CAMA Project</h1>
+    <!-- Links to two sub-applications. -->
     <nav>
       <a href="./reviewer">Tax Assessor Review UI</a>
       <a href="./widget">Property Owner Widget UI</a>
