@@ -108,3 +108,4 @@ WHERE
             b.sale_price = SAFE_CAST(p.sale_price AS FLOAT64)
             AND b.sale_date = DATE(SAFE_CAST(p.sale_date AS TIMESTAMP))
     )
+    
