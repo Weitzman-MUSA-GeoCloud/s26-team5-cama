@@ -11,12 +11,13 @@
 --
 -- Summary:
 -- 1. Filter out invalid values null and 0 market values
--- 2. Group properties into value bins:
+-- 2. Group properties into equal-width linear value bins - $100,000 each:
 --    - 0 to 100,000
 --    - 100,000 to 200,000
---    - 200,000 to 500,000
---    - 500,000 to 1,000,000
---    - 1,000,000+
+--    - 200,000 to 300,000
+--    - 300,000 to 400,000
+--    - 400,000 to 500,000
+--    - 500,000+
 -- 3. Count number of properties in each bin per year
 
 
@@ -27,16 +28,18 @@ SELECT
     CASE
         WHEN market_value < 100000 THEN 0
         WHEN market_value < 200000 THEN 100000
-        WHEN market_value < 500000 THEN 200000
-        WHEN market_value < 1000000 THEN 500000
-        ELSE 1000000
+        WHEN market_value < 300000 THEN 200000
+        WHEN market_value < 400000 THEN 300000
+        WHEN market_value < 500000 THEN 400000
+        ELSE 500000
     END AS lower_bound,
 
     CASE
         WHEN market_value < 100000 THEN 100000
         WHEN market_value < 200000 THEN 200000
+        WHEN market_value < 300000 THEN 300000
+        WHEN market_value < 400000 THEN 400000
         WHEN market_value < 500000 THEN 500000
-        WHEN market_value < 1000000 THEN 1000000
         ELSE 999999999
     END AS upper_bound,
 
