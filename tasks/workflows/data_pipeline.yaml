@@ -169,6 +169,32 @@ main:
                         timeout: 1800
                       result: load_septa_result
 
+    - run_derived_in_parallel:
+        parallel:
+          shared: []
+          branches:
+            - create_training_data:
+                steps:
+                  - run_create_training_data:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/create-training-data"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: create_training_data_result
+
+            - create_tax_year_assessment_bins:
+                steps:
+                  - run_create_tax_year_assessment_bins:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/create-tax-year-assessment-bins"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: create_tax_year_assessment_bins_result
+
     - return_success:
         return:
           status: "SUCCESS"
@@ -179,3 +205,5 @@ main:
             pwd_parcels: "Completed"
             neighborhoods: "Completed"
             septa: "Completed"
+            create_training_data: "Completed"
+            tax_year_assessment_bins: "Completed"

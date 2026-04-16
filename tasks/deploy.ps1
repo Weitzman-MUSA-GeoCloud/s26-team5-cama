@@ -231,6 +231,34 @@ gcloud functions deploy load-septa `
     --memory=512MB `
     --no-allow-unauthenticated
 
+Write-Host "Derived Functions" -ForegroundColor Green
+
+# Create Training Data.
+Write-Host "Deploying create-training-data."
+gcloud functions deploy create-training-data `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/create_training_data `
+    --entry-point=create_training_data `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+# Tax Year Assessment Bins.
+Write-Host "Deploying create-tax-year-assessment-bins."
+gcloud functions deploy create-tax-year-assessment-bins `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/tax_year_bins `
+    --entry-point=create_tax_year_assessment_bins `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
 Write-Host "Workflow" -ForegroundColor Green
 
 # Deploy the data pipeline workflow.

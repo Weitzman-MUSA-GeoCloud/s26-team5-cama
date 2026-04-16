@@ -59,6 +59,35 @@ pwd AS (
     WHERE
         brt_id IS NOT NULL
         AND shape__area > 0
+),
+
+septa_dist AS (
+    SELECT
+        p.parcel_number,
+        MIN(ST_DISTANCE(
+            p.geometry,
+            ST_GEOGPOINT(SAFE_CAST(s.longitude AS FLOAT64), SAFE_CAST(s.latitude AS FLOAT64))
+        )) / 1609.34 AS dist_to_septa_miles
+    FROM `{project_id}.core.opa_properties` AS p
+    CROSS JOIN `{project_id}.core.septa` AS s
+    WHERE
+        p.category_code = '1'
+        AND s.longitude IS NOT NULL
+        AND s.latitude IS NOT NULL
+        AND p.geometry IS NOT NULL
+    GROUP BY p.parcel_number
+),
+
+prop_neighborhood AS (
+    SELECT
+        p.parcel_number,
+        n.name AS neighborhood
+    FROM `{project_id}.core.opa_properties` AS p
+    INNER JOIN `{project_id}.core.neighborhoods` AS n
+        ON ST_CONTAINS(ST_GEOGFROMWKB(n.geometry), p.geometry)
+    WHERE
+        p.category_code = '1'
+        AND p.geometry IS NOT NULL
 )
 
 SELECT
@@ -88,7 +117,9 @@ SELECT
     ) AS pct_change_2023_to_2025,
     pwd.lot_area_sqft,
     pwd.lot_perimeter,
-    pwd.lot_shape_ratio
+    pwd.lot_shape_ratio,
+    sd.dist_to_septa_miles,
+    pn.neighborhood
 FROM `{project_id}.core.opa_properties` AS p
 CROSS JOIN medians AS m
 CROSS JOIN mode_conditions AS mc
@@ -96,6 +127,10 @@ LEFT JOIN assessments_pivot AS a
     ON CAST(a.parcel_number AS STRING) = p.parcel_number
 LEFT JOIN pwd
     ON CAST(pwd.brt_id AS STRING) = p.parcel_number
+LEFT JOIN septa_dist AS sd
+    ON sd.parcel_number = p.parcel_number
+LEFT JOIN prop_neighborhood AS pn
+    ON pn.parcel_number = p.parcel_number
 WHERE
     SAFE_CAST(p.sale_price AS FLOAT64) > 1
     AND p.sale_date IS NOT NULL

@@ -65,9 +65,13 @@ tasks/
 │   ├── requirements.txt
 │   ├── source_septa.sql
 │   └── core_septa.sql
-│── tax_year_bins/
-│   └── main.py
-│   └── requirements.txt
+├── create_training_data/        # Create model training data in BigQuery.
+│   ├── main.py
+│   ├── requirements.txt
+│   └── create_training_data.sql
+│── tax_year_bins/               # Create tax year assessment bins in BigQuery.
+│   ├── main.py
+│   ├── requirements.txt
 │   └── tax_year_assessment_bins.sql
 ├── workflows/
 │   └── data_pipeline.yaml      # Orchestration workflow.
@@ -277,6 +281,29 @@ gcloud functions deploy load-septa `
     --timeout=1800s `
     --memory=512MB `
     --no-allow-unauthenticated
+
+# Derived functions.
+gcloud functions deploy create-training-data `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/create_training_data `
+    --entry-point=create_training_data `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+gcloud functions deploy create-tax-year-assessment-bins `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/tax_year_bins `
+    --entry-point=create_tax_year_assessment_bins `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
 ```
 
 ## Workflow
@@ -318,6 +345,10 @@ gcloud functions call load-opa-assessments --region=us-east4
 gcloud functions call load-pwd-parcels --region=us-east4
 gcloud functions call load-neighborhoods --region=us-east4
 gcloud functions call load-septa --region=us-east4
+
+# Derived functions.
+gcloud functions call create-training-data --region=us-east4
+gcloud functions call create-tax-year-assessment-bins --region=us-east4
 ```
 
 Scheduler:
@@ -346,15 +377,16 @@ Before deploying, ensure the following GCP resources exist:
 2. **BigQuery Datasets:**
    - `source` - For external tables.
    - `core` - For internal tables.
+   - `derived` - For derived/aggregated tables.
 
 ## Data Flow
 
 ```
-┌─────────────┐      ┌─────────────┐     ┌─────────────┐
-│   Extract   │────▶│   Prepare   │────▶│    Load     │
-└─────────────┘      └─────────────┘     └─────────────┘
-       │                  │                   │
-       ▼                  ▼                   ▼
-  raw_data/          prepared_data/       BigQuery
-  *.csv, *.jsonl      *.parquet         source.* & core.*
+┌─────────────┐      ┌─────────────┐     ┌─────────────┐      ┌─────────────┐
+│   Extract   │────▶│   Prepare   │────▶│    Load     │────▶│   Derived   │
+└─────────────┘      └─────────────┘     └─────────────┘      └─────────────┘
+       │                  │                   │                    │
+       ▼                  ▼                   ▼                    ▼
+  raw_data/          prepared_data/       BigQuery             BigQuery
+  *.csv, *.jsonl      *.parquet         source.* & core.*    derived.*
 ```
