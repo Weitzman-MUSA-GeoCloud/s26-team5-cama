@@ -98,7 +98,7 @@ SELECT
     COALESCE(SAFE_CAST(p.total_livable_area AS FLOAT64), m.median_total_livable_area) AS total_livable_area,
     SAFE_CAST(p.total_area AS FLOAT64) AS total_area,
     COALESCE(SAFE_CAST(p.year_built AS FLOAT64), m.median_year_built) AS year_built,
-    2026 - CAST(COALESCE(SAFE_CAST(p.year_built AS FLOAT64), m.median_year_built) AS INT64) AS property_age,
+    EXTRACT(YEAR FROM CURRENT_DATE()) - CAST(COALESCE(SAFE_CAST(p.year_built AS FLOAT64), m.median_year_built) AS INT64) AS property_age,
     COALESCE(SAFE_CAST(p.exterior_condition AS FLOAT64), mc.mode_exterior) AS exterior_condition,
     COALESCE(SAFE_CAST(p.interior_condition AS FLOAT64), mc.mode_interior) AS interior_condition,
     (

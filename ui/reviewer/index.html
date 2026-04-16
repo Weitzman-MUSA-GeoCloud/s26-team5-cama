@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Prevents 300ms tap delay on mobile browsers (iOS Safari, Chrome). -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Mass Appraisal Reviewer</title>
+  <!-- MapLibre GL JS stylesheet. Required for map canvas, controls, and popups. -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.5.0/dist/maplibre-gl.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+
+<body>
+  <div class="layout">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <h1>Mass Appraisal Reviewer</h1>
+
+      <!-- Summary stats, these numbers will be populated dynamically
+           from assessment data once pipeline data is available. -->
+      <div class="summary">
+        <p>
+          There were <strong>350,626</strong> properties that
+          increased in <a href="">assessed value since the last mass appraisal</a>.
+          Overall, each property assessment changed by an
+          <strong>increase of 23.6% on average</strong>.
+        </p>
+      </div>
+
+      <!-- Chart. Distribution of current (ML-predicted) assessment values.
+           Driven by current_assessment_bins.json (issue #5/#19). -->
+      <section class="chart-section">
+        <h2>Predicted Assessment Value Distribution</h2>
+        <div class="chart-container" id="current-assessment-chart"></div>
+      </section>
+
+      <!-- Chart. Distribution of assessed property values for the most
+           recent tax year (issue #18). Driven by tax_year_assessment_bins.json. -->
+      <section class="chart-section">
+        <h2>Tax Year Assessment Value Distribution</h2>
+        <div class="chart-container" id="tax-year-chart"></div>
+      </section>
+    </aside>
+
+    <!-- Main Map Area -->
+    <main class="map-area">
+      <!-- Layer toggle panel. Controls which vector tile data layers are shown
+           on map. Checkbox values correspond to layer IDs added in issue #16. -->
+      <div class="map-controls">
+        <fieldset>
+          <legend class="visually-hidden">Map Layers</legend>
+          <label>
+            <input type="checkbox" name="layer" value="current-absolute" />
+            Current Absolute Assessment $ Values
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="tax-year-absolute" />
+            Tax Year 2023 Absolute Assessment $ Values
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="pct-change" checked />
+            Change (%) in Assessment Since Tax Year 2023
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="dollar-change" />
+            Change ($) in Assessment Since Tax Year 2023
+          </label>
+        </fieldset>
+      </div>
+
+      <!-- Map container. Sized to fill remaining viewport via CSS.
+           MapLibre GL JS mounts canvas into this element. -->
+      <div id="map"></div>
+
+      <!-- Example property popup (hidden by default, shown on click). -->
+      <div class="property-popup" id="property-popup" hidden>
+        <h3 class="popup-address">1234 Sesame St</h3>
+        <table class="popup-details">
+          <tr>
+            <td class="popup-label">Current:</td>
+            <td class="popup-value">$275,400</td>
+          </tr>
+          <tr>
+            <td class="popup-label">2023:</td>
+            <td class="popup-value">$225,200</td>
+          </tr>
+          <tr>
+            <td class="popup-label">Change:</td>
+            <td class="popup-value popup-change-up">&uarr; 22.3%</td>
+          </tr>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@5.5.0/dist/maplibre-gl.js"></script>
+  <script>
+    // Initialize MapLibre GL JS map centered on Philadelphia.
+    // Basemap uses CARTO Positron raster tiles. Neutral light-grey style
+    // for choropleths to stand out.
+    // Vector property tiles (issue #16) will be layered on top of basemap.
+    const map = new maplibregl.Map({
+      container: "map", // ID of DOM element to render map into.
+      style: {
+        version: 8, // MapLibre style specification version.
+        sources: {
+          "carto-light": {
+            type: "raster", // Raster tiles load fast at city-wide zoom levels.
+            tiles: [
+              // Three subdomains for parallel tile fetching / load balancing.
+              "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+              "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+              "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+            ],
+            tileSize: 256,
+            attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/attributions'>CARTO</a>",
+          },
+        },
+        layers: [
+          {
+            id: "carto-light-layer",
+            type: "raster",
+            source: "carto-light",
+            minzoom: 0,
+            maxzoom: 19,
+          },
+        ],
+      },
+      center: [-75.1652, 39.9526], // Philadelphia city center [longitude, latitude].
+      zoom: 11, // City-wide view. Shows all of Philadelphia at load.
+    });
+
+    // Add zoom (+/−) and compass rotation controls to the top-left corner.
+    map.addControl(new maplibregl.NavigationControl(), "top-left");
+  </script>
+
+  <script>
+    // Tax Year Assessment Value Distribution Chart
+    // Fetch from public GCS bucket in future:
+    // https://storage.googleapis.com/musa5090s26-team5-public/configs/tax_year_assessment_bins.json
+    // Below currently uses local dummy data file.
+    const TAX_YEAR_BINS_URL = "../configs/dummy_tax_year_assessment_bins.json";
+
+    function formatDollar(value) {
+      if (value >= 1_000_000) return "$" + (value / 1_000_000).toFixed(1) + "M";
+      if (value >= 1_000) return "$" + (value / 1_000).toFixed(0) + "K";
+      return "$" + value;
+    }
+
+    fetch(TAX_YEAR_BINS_URL)
+      .then((res) => res.json())
+      .then((bins) => {
+        const categories = bins.map((b) => {
+          const upper = b.upper_bound >= 999_999_999 ? "+" : " \u2013 " + formatDollar(b.upper_bound);
+          return formatDollar(b.lower_bound) + upper;
+        });
+        const counts = bins.map((b) => b.property_count);
+
+        const options = {
+          chart: {
+            type: "bar",
+            height: 220,
+            toolbar: { show: false },
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          },
+          series: [{ name: "Properties", data: counts }],
+          xaxis: {
+            categories,
+            labels: {
+              rotate: -45,
+              rotateAlways: true,
+              style: { fontSize: "10px" },
+            },
+          },
+          yaxis: {
+            title: { text: "# Properties" },
+            labels: {
+              formatter: (val) => val >= 1000 ? (val / 1000).toFixed(0) + "K" : val,
+            },
+          },
+          colors: ["#2C3968"],
+          plotOptions: {
+            bar: { borderRadius: 2, columnWidth: "70%" },
+          },
+          dataLabels: { enabled: false },
+          tooltip: {
+            y: {
+              formatter: (val) => val.toLocaleString() + " properties",
+            },
+          },
+        };
+
+        const chart = new ApexCharts(
+          document.querySelector("#tax-year-chart"),
+          options
+        );
+        chart.render();
+      })
+      .catch((err) => {
+        console.error("Failed to load tax year assessment bins:", err);
+        document.querySelector("#tax-year-chart").textContent =
+          "Chart data unavailable.";
+      });
+  </script>
+
+  <script>
+    
+    // Predicted (Current) Assessment Value Distribution Chart
+    // Fetch from public GCS bucket in future:
+    // https://storage.googleapis.com/musa5090s26-team5-public/configs/current_assessment_bins.json
+    // Below currently uses local dummy data file.
+    const CURRENT_BINS_URL = "../configs/dummy_current_assessment_bins.json";
+
+    fetch(CURRENT_BINS_URL)
+      .then((res) => res.json())
+      .then((bins) => {
+        const categories = bins.map((b) => {
+          const upper = b.upper_bound >= 999_999_999 ? "+" : " \u2013 " + formatDollar(b.upper_bound);
+          return formatDollar(b.lower_bound) + upper;
+        });
+        const counts = bins.map((b) => b.property_count);
+
+        const options = {
+          chart: {
+            type: "bar",
+            height: 220,
+            toolbar: { show: false },
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          },
+          series: [{ name: "Properties", data: counts }],
+          xaxis: {
+            categories,
+            labels: {
+              rotate: -45,
+              rotateAlways: true,
+              style: { fontSize: "10px" },
+            },
+          },
+          yaxis: {
+            title: { text: "# Properties" },
+            labels: {
+              formatter: (val) => val >= 1000 ? (val / 1000).toFixed(0) + "K" : val,
+            },
+          },
+          colors: ["#F2541B"],
+          plotOptions: {
+            bar: { borderRadius: 2, columnWidth: "70%" },
+          },
+          dataLabels: { enabled: false },
+          tooltip: {
+            y: {
+              formatter: (val) => val.toLocaleString() + " properties",
+            },
+          },
+        };
+
+        const chart = new ApexCharts(
+          document.querySelector("#current-assessment-chart"),
+          options
+        );
+        chart.render();
+      })
+      .catch((err) => {
+        console.error("Failed to load current assessment bins:", err);
+        document.querySelector("#current-assessment-chart").textContent =
+          "Chart data unavailable.";
+      });
+  </script>
+</body>
+
+</html>

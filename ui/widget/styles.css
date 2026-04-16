@@ -1,0 +1,298 @@
+/* Widget UI: styles.css
+   Embeddable property valuation history widget.
+   Styled to match Philadelphia city design standards (phila.gov / atlas.phila.gov).
+   Color Palette: navy #2C3968, orange #F2541B, gold #F2BC1B, warm grey #D8D7B1 */
+
+/* Reset and Base
+   Normalizes box model and removes browser default spacing. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  
+  /* Open Sans matches phila.gov typographic standard. System fonts as fallback. */
+  font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  color: #232323;
+  background: #D8D7B1; /* Warm grey page background mimics atlas.phila.gov framing. */
+}
+
+a {
+  color: #F2541B; /* Philadelphia city brand orange. */
+}
+
+a:hover {
+  color: #c23d0e; /* Darker shade for sufficient contrast on hover. */
+}
+
+strong, b {
+  color: #F2541B; /* Brand orange for emphasis. */
+}
+
+/* Widget Container
+   Centers widget on page with a max-width so it reads well on desktop.
+   White card surface sits on top of warm-grey body background. */
+
+.widget-container {
+  max-width: 820px;
+  margin: 32px auto;
+  background: #fff;
+  border: 1px solid #cfcfcf;
+}
+
+/* OPA Lookup Bar
+   Navy header bar where user enters an OPA account number.
+   Input and button are joined flush (gap: 0) to form a single search field. */
+
+.lookup-bar {
+  background: #2C3968; /* Navy header matches phila.gov app bars. */
+  color: #fff;
+  padding: 16px 20px;
+}
+
+.lookup-bar label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.lookup-input-group {
+  display: flex;
+  gap: 0; /* No gap between input and button. */
+}
+
+.lookup-input-group input {
+  flex: 1; /* Input takes all available width, button stays its natural size. */
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.lookup-input-group input::placeholder {
+  color: #999;
+}
+
+.lookup-input-group button {
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: #F2BC1B; /* Gold default state. */
+  color: #232323;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lookup-input-group button:hover {
+  background: #F2541B; /* Shift to orange on hover. */
+  color: #fff;
+}
+
+/* Valuation History Section
+   Main content area below lookup bar. */
+
+.valuation-history {
+  padding: 20px;
+}
+
+.section-heading {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2C3968;
+  border-bottom: 2px solid #F2BC1B; /* Gold underline accent matches phila.gov section headers. */
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+/* Record count shown next to heading. Lighter weight to read as metadata. */
+.record-count {
+  font-weight: 400;
+  color: #888;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #232323;
+  margin-bottom: 20px;
+}
+
+/* Chart
+   Placeholder shown before charting library renders real chart.
+   Container min-height reserves space so layout doesn't shift
+   once a chart is injected. */
+
+.chart-wrapper {
+  margin-bottom: 24px;
+}
+
+.chart-container {
+  width: 100%;
+  min-height: 200px; /* Prevents layout shift when chart library loads. */
+  border: 1px solid #e0e0e0;
+  border-radius: 2px;
+  position: relative;
+}
+
+/* Centered empty-state message. Hidden once a chart is rendered. */
+.chart-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.chart-placeholder-text {
+  font-size: 0.85rem;
+  color: #999;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* Data Table
+   Tabular history of assessed values by year, populated dynamically from BigQuery.
+   overflow-x: Auto on wrapper lets table scroll horizontally on narrow screens
+   without breaking widget's fixed max-width. */
+
+.table-wrapper {
+  overflow-x: auto; /* Horizontal scroll for narrow viewports. */
+}
+
+.valuation-table {
+  width: 100%;
+  border-collapse: collapse; /* Remove default cell spacing. */
+  font-size: 0.85rem;
+}
+
+.valuation-table thead th {
+  background: #2C3968; /* Navy header row matches lookup bar. */
+  color: #fff;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  white-space: nowrap; /* Keep column headers on one line. */
+}
+
+.valuation-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  white-space: nowrap; /* Prevent dollar values from wrapping mid-number. */
+}
+
+/* Alternating row stripe for readability across many years. */
+.valuation-table tbody tr:nth-child(even) {
+  background: #f4f3e8;
+}
+
+.valuation-table tbody tr:hover {
+  background: #D8D7B1; /* Warm grey hover matches page background. */
+}
+
+/* Mobile Responsive
+   
+   Two breakpoints used:
+   - 768px for ablets in portrait and large phones in landscape.
+   - 480px for small phones (iPhone SE, Galaxy S series, Pixel, etc.).
+
+   Widget is already mostly responsive thanks to max-width + auto margin
+   and overflow-x: auto on table. */
+
+/* Tablet / Large Phone (≤ 768px)
+   Reduce outer margin and padding. Table already scrolls horizontally. */
+@media (width <= 768px) {
+  .widget-container {
+    margin: 16px 12px; /* Reduce margins so widget uses more screen width. */
+  }
+
+  .valuation-history {
+    padding: 16px;
+  }
+
+  .section-description {
+    font-size: 0.82rem;
+  }
+
+  /* Make chart shorter on tablets to leave room for table. */
+  .chart-container {
+    min-height: 170px;
+  }
+
+  .chart-placeholder {
+    height: 170px;
+  }
+
+  /* Ensure table cells have enough padding for touch targets. */
+  .valuation-table thead th,
+  .valuation-table tbody td {
+    padding: 10px 8px;
+  }
+}
+
+/* Small Phone (≤ 480px)
+   Edge-to-edge layout. Larger touch targets. Reduced font sizes. */
+@media (width <= 480px) {
+  .widget-container {
+    margin: 0; /* Full-bleed on small phones. */
+    border-left: none;
+    border-right: none;
+  }
+
+  /* Increase input/button height for thumb (≥ 44px).
+     Matches Apple HIG and Material Design minimum touch target. */
+  .lookup-input-group input {
+    padding: 12px;
+    font-size: 1rem; /* 16px prevents iOS auto-zoom on focus. */
+  }
+
+  .lookup-input-group button {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+  }
+
+  .lookup-bar {
+    padding: 14px;
+  }
+
+  .valuation-history {
+    padding: 14px 12px;
+  }
+
+  .section-heading {
+    font-size: 1rem;
+  }
+
+  .section-description {
+    font-size: 0.8rem;
+    margin-bottom: 14px;
+  }
+
+  /* Compact chart on very small screens. */
+  .chart-container {
+    min-height: 150px;
+  }
+
+  .chart-placeholder {
+    height: 150px;
+  }
+
+  /* Smaller table text to reduce horizontal overflow. */
+  .valuation-table {
+    font-size: 0.78rem;
+  }
+
+  .valuation-table thead th,
+  .valuation-table tbody td {
+    padding: 8px 6px;
+  }
+}

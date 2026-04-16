@@ -1,12 +1,12 @@
 """
-Cloud Function to load OPA Assessments data into BigQuery.
+Cloud Function to load Philadelphia Neighborhoods data into BigQuery.
 
 This function creates or replaces:
 1. An external table in the source dataset backed by the prepared Parquet file.
-2. An internal table in the core dataset with an added property_id field.
+2. An internal table in the core dataset.
 
 Usage:
-    Deploy as a Cloud Function named "load-opa-assessments"
+    Deploy as a Cloud Function named "load-neighborhoods"
 """
 
 import functions_framework
@@ -57,11 +57,11 @@ def run_sql_file(client, sql_file_path, context):
 
 
 @functions_framework.http
-def load_opa_assessments(request):
-    """HTTP Cloud Function to load OPA Assessments into BigQuery.
+def load_neighborhoods(request):
+    """HTTP Cloud Function to load Philadelphia Neighborhoods into BigQuery.
 
-    Creates or replaces the source.opa_assessments external table and
-    the core.opa_assessments internal table.
+    Creates or replaces the source.neighborhoods external table and
+    the core.neighborhoods internal table.
 
     Args:
         request: The HTTP request object.
@@ -82,14 +82,14 @@ def load_opa_assessments(request):
         }
 
         # Run the source table SQL.
-        run_sql_file(client, DIR_NAME / "source_opa_assessments.sql", context)
-        print("Created or replaced source.opa_assessments external table.")
+        run_sql_file(client, DIR_NAME / "source_neighborhoods.sql", context)
+        print("Created or replaced source.neighborhoods external table.")
 
         # Run the core table SQL.
-        run_sql_file(client, DIR_NAME / "core_opa_assessments.sql", context)
-        print("Created or replaced core.opa_assessments table.")
+        run_sql_file(client, DIR_NAME / "core_neighborhoods.sql", context)
+        print("Created or replaced core.neighborhoods table.")
 
-        return ("Successfully loaded OPA Assessments into BigQuery.", 200)
+        return ("Successfully loaded Philadelphia Neighborhoods into BigQuery.", 200)
 
     except Exception as e:
         print(f"Error: {e}.")
