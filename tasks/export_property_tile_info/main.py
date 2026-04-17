@@ -42,7 +42,7 @@ def export_property_tile_info(request):
             geometry = json.loads(row.geometry)
             # Exclude the geometry column from properties to avoid duplication in the GeoJSON.
             # Once the columns are read into a dictionary, we can filter out the geometry column and use the rest as properties.
-            properties = properties = {key: value for (key, value) in row.items() if key != "geometry_column"} 
+            properties = properties = {key: value for (key, value) in row.items() if key != "geometry_column"}
             feature = {
                 "type": "Feature",
                 "geometry": geometry,
@@ -70,5 +70,3 @@ def export_property_tile_info(request):
     except Exception as e:
         print(f"Error: {e}")
         return (f"Error exporting property tile info: {e}", 500)
-
-
