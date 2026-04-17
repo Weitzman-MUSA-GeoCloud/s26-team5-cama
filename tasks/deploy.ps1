@@ -261,6 +261,20 @@ gcloud functions deploy create-tax-year-assessment-bins `
 
 Write-Host "Workflow" -ForegroundColor Green
 
+# Extract Property Tile Info.
+Write-Host "Deploying export-property-tile-info"
+gcloud functions deploy export-property-tile-info `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/export_property_tile_info `
+    --entry-point=export_property_tile_info `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=4GB `
+    --no-allow-unauthenticated
+
+
 # Deploy the data pipeline workflow.
 Write-Host "Deploying data-pipeline workflow."
 gcloud workflows deploy data-pipeline `
