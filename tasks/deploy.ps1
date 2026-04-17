@@ -274,6 +274,19 @@ gcloud functions deploy export-property-tile-info `
     --memory=4GB `
     --no-allow-unauthenticated
 
+# Generate tiles for the property tile info.
+Write-Host "Deploying generate-tiles."
+gcloud functions deploy generate-tiles `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/generate_tiles `
+    --entry-point=generate_tiles `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=8GB `
+    --no-allow-unauthenticated
+    
 
 # Deploy the data pipeline workflow.
 Write-Host "Deploying data-pipeline workflow."

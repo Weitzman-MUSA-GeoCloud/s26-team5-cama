@@ -195,6 +195,28 @@ main:
                         timeout: 1800
                       result: create_tax_year_assessment_bins_result
 
+            - export_property_tile_info:
+                steps:
+                  - run_export_property_tile_info:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/export-property-tile-info"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: export_property_tile_info_result
+
+            - generate_tiles:
+                steps:
+                  - run_generate_tiles:
+                      call: http.post
+                      args:
+                        url: ${"https://run.googleapis.com/v2/projects/" + project_id + "/locations/" + region + "/jobs/generate-property-map-tiles:run"}
+                        auth:
+                          type: OAuth2
+                        timeout: 1800
+                      result: generate_tiles_result
+
     - return_success:
         return:
           status: "SUCCESS"
