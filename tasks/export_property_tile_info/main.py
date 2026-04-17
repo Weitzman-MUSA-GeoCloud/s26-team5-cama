@@ -39,7 +39,7 @@ def export_property_tile_info(request):
         # Build GeoJSON FeatureCollection from query results.
         features = []
         for row in results:
-            geometry = json.loads(row.geometry_column)
+            geometry = json.loads(row.geometry)
             # Exclude the geometry column from properties to avoid duplication in the GeoJSON.
             # Once the columns are read into a dictionary, we can filter out the geometry column and use the rest as properties.
             properties = properties = {key: value for (key, value) in row.items() if key != "geometry_column"} 
