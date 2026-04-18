@@ -206,6 +206,17 @@ main:
                         timeout: 1800
                       result: generate_tax_year_chart_config_result
 
+            - generate_tax_assessment_chart_configs:
+                steps:
+                  - run_generate_tax_assessment_chart_configs:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/generate-tax-assessment-chart-configs"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: generate_tax_assessment_chart_configs_result
+
     - return_success:
         return:
           status: "SUCCESS"

@@ -259,6 +259,20 @@ gcloud functions deploy create-tax-year-assessment-bins `
     --memory=512MB `
     --no-allow-unauthenticated
 
+# Assessment Chart Config.
+Write-Host "Deploying generate-assessment-chart-configs."
+gcloud functions deploy generate-assessment-chart-configs `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/generate_assessment_chart_configs `
+    --entry-point=generate_assessment_chart_config `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+
 Write-Host "Workflow" -ForegroundColor Green
 
 # Deploy the data pipeline workflow.

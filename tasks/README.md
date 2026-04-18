@@ -78,6 +78,10 @@ tasks/
 │   ├── main.py
 │   └── requirements.txt
 │
+│── generate_assessment_chart_config/ # Generate assessmemt chart config JSON for front-end. 
+│    ├──main.py
+│    └──requirements.txt
+│
 ├── workflows/
 │   └── data_pipeline.yaml      # Orchestration workflow.
 ├── deploy.ps1                  # PowerShell deployment script.
