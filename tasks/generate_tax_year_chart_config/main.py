@@ -20,7 +20,8 @@ SQL_QUERY = """
     SELECT
         lower_bound,
         upper_bound,
-        property_count
+        property_count,
+        tax_year
     FROM `derived.tax_year_assessment_bins`
     WHERE tax_year = (SELECT MAX(tax_year) FROM `derived.tax_year_assessment_bins`)
     ORDER BY lower_bound
@@ -43,6 +44,7 @@ def generate_tax_year_chart_config(request):
                 "lower_bound": row.lower_bound,
                 "upper_bound": row.upper_bound,
                 "property_count": row.property_count,
+                "tax_year": row.tax_year,
             }
             for row in results
         ]
