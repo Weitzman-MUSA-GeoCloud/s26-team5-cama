@@ -10,6 +10,7 @@
 -- core.pwd_parcels
 -- core.opa_properties
 -- core.opa_assessments
+-- core.neighborhoods
 -- derived.current_assessments
 -- 
 -- Summary:
@@ -35,8 +36,10 @@ WITH latest_assessment AS (
             parcel_number,
             market_value,
             year,
-            ROW_NUMBER() OVER (PARTITION BY parcel_number ORDER BY year DESC) AS rn
-        FROM `{project_id}.core.opa_assessments`
+            ROW_NUMBER()
+                OVER (PARTITION BY parcel_number ORDER BY year DESC)
+                AS rn
+        FROM `musa5090s26-team5.core.opa_assessments`
         WHERE
             market_value IS NOT NULL
             AND market_value > 0
@@ -47,9 +50,11 @@ WITH latest_assessment AS (
 assessments_pivot AS (
     SELECT
         parcel_number,
-        MAX(CASE WHEN year = 2023.0 THEN market_value END) AS assessed_value_2023,
-        MAX(CASE WHEN year = 2024.0 THEN market_value END) AS assessed_value_2024
-    FROM `{project_id}.core.opa_assessments`
+        MAX(CASE WHEN year = 2023.0 THEN market_value END)
+            AS assessed_value_2023,
+        MAX(CASE WHEN year = 2024.0 THEN market_value END)
+            AS assessed_value_2024
+    FROM `musa5090s26-team5.core.opa_assessments`
     WHERE
         market_value IS NOT NULL
         AND market_value > 0
@@ -58,7 +63,7 @@ assessments_pivot AS (
 
 SELECT
     -- Geometry
-    ST_AsGeoJSON(pwd.geometry) AS geometry,
+    ST_ASGEOJSON(pwd.geometry) AS geometry,
 
     -- Id
     p.parcel_number AS property_id,
@@ -69,7 +74,10 @@ SELECT
     la.tax_year_assessed_value,
     la.tax_year,
     ROUND(
-        SAFE_DIVIDE(ca.predicted_value - la.tax_year_assessed_value, la.tax_year_assessed_value),
+        SAFE_DIVIDE(
+            ca.predicted_value - la.tax_year_assessed_value,
+            la.tax_year_assessed_value
+        ),
         4
     ) AS pct_change,
     p.zip_code,
@@ -80,16 +88,23 @@ SELECT
     SAFE_CAST(p.total_livable_area AS FLOAT64) AS total_livable_area,
     SAFE_CAST(p.number_of_bathrooms AS FLOAT64) AS number_of_bathrooms,
     SAFE_CAST(p.interior_condition AS FLOAT64) AS interior_condition,
-    EXTRACT(YEAR FROM SAFE_CAST(p.sale_date AS TIMESTAMP)) AS sale_year
+    EXTRACT(YEAR FROM p.sale_date) AS sale_year,
+    n.name AS neighborhood
 
-FROM `{project_id}.core.opa_properties` AS p
-JOIN `{project_id}.core.pwd_parcels` AS pwd
-    ON CAST(pwd.brt_id AS STRING) = p.parcel_number
+FROM `musa5090s26-team5.core.opa_properties` AS p
+INNER JOIN `musa5090s26-team5.core.pwd_parcels` AS pwd
+    ON pwd.property_id = p.parcel_number
 LEFT JOIN latest_assessment AS la
-    ON la.parcel_number = p.parcel_number
-LEFT JOIN `{project_id}.derived.current_assessments` AS ca
-    ON ca.property_id = p.parcel_number
+    ON p.parcel_number = la.parcel_number
+LEFT JOIN `musa5090s26-team5.derived.current_assessments` AS ca
+    ON p.parcel_number = ca.property_id
 LEFT JOIN assessments_pivot AS ap
-    ON ap.parcel_number = p.parcel_number
+    ON p.parcel_number = ap.parcel_number
+LEFT JOIN `musa5090s26-team5.core.neighborhoods` AS n
+    ON ST_WITHIN(
+        ST_GEOGFROMTEXT(ST_ASTEXT(p.geometry)),
+        ST_GEOGFROMTEXT(ST_ASTEXT(n.geometry))
+    )
 WHERE
     p.category_code = '1'
+    AND pwd.geometry IS NOT NULL
