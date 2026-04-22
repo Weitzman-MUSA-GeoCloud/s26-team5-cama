@@ -16,8 +16,8 @@ from google.cloud import bigquery
 from google.cloud import storage
 import os
 from dotenv import load_dotenv
+import pathlib
 
-load_dotenv()
 
 @functions_framework.http
 def export_property_tile_info(request):
@@ -25,9 +25,9 @@ def export_property_tile_info(request):
         temp_data_bucket = os.getenv("TEMP_DATA_BUCKET", "musa5090s26-team5-temp_data")
 
         # Call the SQL file to get the property tile information.
-        with open("property_tile_info.sql", "r") as sql_file:
-            sql = sql_file.read()
-            print("Executing property_tile_info.sql...")
+        DIR_NAME = pathlib.Path(__file__).parent
+        sql = (DIR_NAME / "property_tile_info.sql").read_text()
+        print("Executing property_tile_info.sql...")
 
         # Activate BigQuery client and run the query! 
         client = bigquery.Client()
@@ -42,7 +42,7 @@ def export_property_tile_info(request):
             geometry = json.loads(row.geometry)
             # Exclude the geometry column from properties to avoid duplication in the GeoJSON.
             # Once the columns are read into a dictionary, we can filter out the geometry column and use the rest as properties.
-            properties = properties = {key: value for (key, value) in row.items() if key != "geometry_column"}
+            properties =  {key: value for (key, value) in row.items() if key != "geometry"}
             feature = {
                 "type": "Feature",
                 "geometry": geometry,
