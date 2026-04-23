@@ -69,4 +69,3 @@ def export_property_tile_info(request):
     except Exception as e:
         print(f"Error: {e}")
         return (f"Error exporting property tile info: {e}", 500)
-    
