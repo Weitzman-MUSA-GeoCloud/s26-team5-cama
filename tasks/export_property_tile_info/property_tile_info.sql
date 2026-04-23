@@ -102,8 +102,8 @@ LEFT JOIN assessments_pivot AS ap
     ON p.parcel_number = ap.parcel_number
 LEFT JOIN `musa5090s26-team5.core.neighborhoods` AS n
     ON ST_WITHIN(
-        ST_GEOGFROMTEXT(ST_ASTEXT(p.geometry)),
-        ST_GEOGFROMTEXT(ST_ASTEXT(n.geometry))
+        p.geometry,
+        ST_GEOGFROMWKB(n.geometry)
     )
 WHERE
     p.category_code = '1'

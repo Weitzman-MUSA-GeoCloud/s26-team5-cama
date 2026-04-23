@@ -206,6 +206,17 @@ main:
                         timeout: 1800
                       result: export_property_tile_info_result
 
+            - create_current_assessment_bins:
+                steps:
+                  - run_create_current_assessment_bins:
+                      call: http.post
+                      args:
+                        url: ${base_url + "/create-current-assessment-bins"}
+                        auth:
+                          type: OIDC
+                        timeout: 1800
+                      result: create_current_assessment_bins_result
+
     - generate_property_map_tiles:
         steps:
           - run_generate_property_map_tiles:
@@ -215,7 +226,7 @@ main:
                 auth:
                   type: OAuth2
                 timeout: 1800
-              result: generate_property_map_  tiles_result
+              result: generate_property_map_tiles_result
 
     - return_success:
         return:
@@ -229,3 +240,6 @@ main:
             septa: "Completed"
             create_training_data: "Completed"
             tax_year_assessment_bins: "Completed"
+            current_assessment_bins: "Completed"
+            export_property_tile_info: "Completed"
+            generate_property_map_tiles: "Completed"
