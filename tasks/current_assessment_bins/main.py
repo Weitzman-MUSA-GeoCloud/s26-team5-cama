@@ -13,7 +13,6 @@ Use: Deploy as a Cloud Function named "create-current-assessment-bins"
 
 import functions_framework
 import pathlib
-import os
 from google.cloud import bigquery
 from dotenv import load_dotenv
 
