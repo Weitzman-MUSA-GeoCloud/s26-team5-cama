@@ -11,10 +11,9 @@ import functions_framework
 import json
 from google.cloud import bigquery
 from google.cloud import storage
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
+
+
 
 SQL_QUERY = """
     SELECT
