@@ -73,6 +73,14 @@ tasks/
 │   ├── main.py
 │   ├── requirements.txt
 │   └── tax_year_assessment_bins.sql
+│
+│── generate_tax_year_chart_config/  # Generate tax year chart config JSON for front-end.
+│   ├── main.py
+│   └── requirements.txt
+│
+│── generate_assessment_chart_config/ # Generate assessmemt chart config JSON for front-end. 
+│    ├──main.py
+│    └──requirements.txt
 |
 ├── export_property_tile_info/   # Create a task to export a GeoJSON file of assesment values for each property. 
 |   ├── main.py 
@@ -316,6 +324,17 @@ gcloud functions deploy create-tax-year-assessment-bins `
     --memory=512MB `
     --no-allow-unauthenticated
 
+gcloud functions deploy generate-tax-year-chart-config `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/generate_tax_year_chart_config `
+    --entry-point=generate_tax_year_chart_config `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
 gcloud functions deploy export-property-tile-info `
     --gen2 `
     --runtime=python311 `
@@ -383,6 +402,7 @@ gcloud functions call load-septa --region=us-east4
 # Derived functions.
 gcloud functions call create-training-data --region=us-east4
 gcloud functions call create-tax-year-assessment-bins --region=us-east4
+gcloud functions call generate-tax-year-chart-config --region=us-east4
 gcloud functions call export-property-tile-info --region=us-east4
 ```
 

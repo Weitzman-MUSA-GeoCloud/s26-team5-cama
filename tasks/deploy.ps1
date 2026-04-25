@@ -259,6 +259,15 @@ gcloud functions deploy create-tax-year-assessment-bins `
     --memory=512MB `
     --no-allow-unauthenticated
 
+# Assessment Chart Config.
+Write-Host "Deploying generate-assessment-chart-config."
+gcloud functions deploy generate-assessment-chart-config `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/generate_assessment_chart_config `
+    --entry-point=generate_assessment_chart_config `
+
 # Current Assessment Bins (Issue #8).
 Write-Host "Deploying create-current-assessment-bins."
 gcloud functions deploy create-current-assessment-bins `
@@ -267,6 +276,19 @@ gcloud functions deploy create-current-assessment-bins `
     --region=$REGION `
     --source=tasks/current_assessment_bins `
     --entry-point=create_current_assessment_bins `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+# Tax Year Chart Config.
+Write-Host "Deploying generate-tax-year-chart-config."
+gcloud functions deploy generate-tax-year-chart-config `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/generate_tax_year_chart_config `
+    --entry-point=generate_tax_year_chart_config `
     --trigger-http `
     --timeout=1800s `
     --memory=512MB `
