@@ -64,4 +64,3 @@ def generate_assessment_chart_configs(request):
     except Exception as e:
         print(f"Error generating assessment chart config: {e}")
         return (f"Error generating assessment chart config: {e}", 500)
-        
