@@ -6,95 +6,95 @@ This folder contains the Cloud Functions and Workflows for the Philadelphia Comp
 
 ```
 tasks/
-|── config-cors/                # Set up CORS configuration for the public bucket
-|   ├── main.py
-│   └── requirements.txt
-|
-├── extract_opa_properties/     # Extract OPA Properties from CARTO API.
+├── config-cors/                       # CORS configuration for the public bucket.
+│   └── cors.json
+├── create_training_data/              # Create model training data in BigQuery.
+│   ├── create_training_data.sql
 │   ├── main.py
 │   └── requirements.txt
-├── extract_opa_assessments/    # Extract OPA Assessments from OpenData S3.
+├── current_assessment_bins/           # Create current (predicted) assessment bins in BigQuery.
+│   ├── current_assessment_bins.sql
 │   ├── main.py
 │   └── requirements.txt
-├── extract_pwd_parcels/        # Extract PWD Parcels from ArcGIS Hub.
+├── export_property_tile_info/         # Export a GeoJSON file of assessment values for each property.
+│   ├── main.py
+│   ├── property_tile_info.sql
+│   └── requirements.txt
+├── extract_neighborhoods/             # Extract Philadelphia Neighborhoods as Parquet.
 │   ├── main.py
 │   └── requirements.txt
-├── extract_neighborhoods/      # Extract Philadelphia Neighborhoods as Parquet.
+├── extract_opa_assessments/           # Extract OPA Assessments from OpenData S3.
 │   ├── main.py
 │   └── requirements.txt
-├── extract_septa/              # Extract SEPTA Stations as CSV.
+├── extract_opa_properties/            # Extract OPA Properties from CARTO API.
 │   ├── main.py
 │   └── requirements.txt
-├── prepare_opa_properties/     # Prepare OPA Properties as GeoParquet.
+├── extract_pwd_parcels/               # Extract PWD Parcels from ArcGIS Hub.
 │   ├── main.py
 │   └── requirements.txt
-├── prepare_opa_assessments/    # Prepare OPA Assessments as Parquet.
+├── extract_septa/                     # Extract SEPTA Stations as CSV.
 │   ├── main.py
 │   └── requirements.txt
-├── prepare_pwd_parcels/        # Prepare PWD Parcels as GeoParquet.
+├── generate_assessment_chart_config/  # Generate predicted-assessment chart config JSON for front-end.
 │   ├── main.py
 │   └── requirements.txt
-├── prepare_neighborhoods/      # Prepare Philadelphia Neighborhoods as Parquet.
+├── generate_map_styling_metadata/     # Export map styling metadata JSON for front-end choropleths.
 │   ├── main.py
 │   └── requirements.txt
-├── prepare_septa/              # Prepare SEPTA Stations as Parquet.
+├── generate_property_map_tiles/       # Cloud Run job that builds vector tiles from the property GeoJSON.
+│   ├── Dockerfile
+│   └── script.sh
+├── generate_tax_year_chart_config/    # Generate tax-year-assessment chart config JSON for front-end.
 │   ├── main.py
 │   └── requirements.txt
-├── load_opa_properties/        # Load OPA Properties into BigQuery.
+├── load_neighborhoods/                # Load Philadelphia Neighborhoods into BigQuery.
+│   ├── core_neighborhoods.sql
 │   ├── main.py
 │   ├── requirements.txt
-│   ├── source_opa_properties.sql
-│   └── core_opa_properties.sql
-├── load_opa_assessments/       # Load OPA Assessments into BigQuery.
+│   └── source_neighborhoods.sql
+├── load_opa_assessments/              # Load OPA Assessments into BigQuery.
+│   ├── core_opa_assessments.sql
 │   ├── main.py
 │   ├── requirements.txt
-│   ├── source_opa_assessments.sql
-│   └── core_opa_assessments.sql
-├── load_pwd_parcels/           # Load PWD Parcels into BigQuery.
+│   └── source_opa_assessments.sql
+├── load_opa_properties/               # Load OPA Properties into BigQuery.
+│   ├── core_opa_properties.sql
 │   ├── main.py
 │   ├── requirements.txt
-│   ├── source_pwd_parcels.sql
-│   └── core_pwd_parcels.sql
-├── load_neighborhoods/         # Load Philadelphia Neighborhoods into BigQuery.
+│   └── source_opa_properties.sql
+├── load_pwd_parcels/                  # Load PWD Parcels into BigQuery.
+│   ├── core_pwd_parcels.sql
 │   ├── main.py
 │   ├── requirements.txt
-│   ├── source_neighborhoods.sql
-│   └── core_neighborhoods.sql
-├── load_septa/                 # Load SEPTA Stations into BigQuery.
+│   └── source_pwd_parcels.sql
+├── load_septa/                        # Load SEPTA Stations into BigQuery.
+│   ├── core_septa.sql
 │   ├── main.py
 │   ├── requirements.txt
-│   ├── source_septa.sql
-│   └── core_septa.sql
-├── create_training_data/        # Create model training data in BigQuery.
+│   └── source_septa.sql
+├── prepare_neighborhoods/             # Prepare Philadelphia Neighborhoods as Parquet.
 │   ├── main.py
-│   ├── requirements.txt
-│   └── create_training_data.sql
-│── tax_year_bins/               # Create tax year assessment bins in BigQuery.
+│   └── requirements.txt
+├── prepare_opa_assessments/           # Prepare OPA Assessments as Parquet.
+│   ├── main.py
+│   └── requirements.txt
+├── prepare_opa_properties/            # Prepare OPA Properties as GeoParquet.
+│   ├── main.py
+│   └── requirements.txt
+├── prepare_pwd_parcels/               # Prepare PWD Parcels as GeoParquet.
+│   ├── main.py
+│   └── requirements.txt
+├── prepare_septa/                     # Prepare SEPTA Stations as Parquet.
+│   ├── main.py
+│   └── requirements.txt
+├── tax_year_bins/                     # Create tax-year assessment bins in BigQuery.
 │   ├── main.py
 │   ├── requirements.txt
 │   └── tax_year_assessment_bins.sql
-│
-│── generate_tax_year_chart_config/  # Generate tax year chart config JSON for front-end.
-│   ├── main.py
-│   └── requirements.txt
-│
-│── generate_assessment_chart_config/ # Generate assessmemt chart config JSON for front-end. 
-│    ├──main.py
-│    └──requirements.txt
-|
-├── export_property_tile_info/   # Create a task to export a GeoJSON file of assesment values for each property. 
-|   ├── main.py 
-|   ├── requirements.txt
-|   └── property_tile_info.sql
-|
-├── generate_map_styling_metadata/   # Create a task to export a GeoJSON file map styling metadata. 
-|   ├── main.py 
-|   └── requirements.txt
-|
 ├── workflows/
-│   └── data_pipeline.yaml      # Orchestration workflow.
-├── deploy.ps1                  # PowerShell deployment script.
-└── README.md                   # This file.
+│   └── data_pipeline.yaml             # Orchestration workflow.
+├── deploy.ps1                         # PowerShell deployment script.
+└── README.md                          # This file.
 ```
 
 ## Cloud Functions
@@ -350,13 +350,44 @@ gcloud functions deploy generate-map-styling-metadata `
     --gen2 `
     --runtime=python311 `
     --region=$REGION `
-    --source=tasks/generate-map-styling-metadata `
-    --entry-point=generate-map-styling-metadata `
+    --source=tasks/generate_map_styling_metadata `
+    --entry-point=generate_map_styling_metadata `
     --trigger-http `
     --timeout=1800s `
     --memory=512MB `
     --no-allow-unauthenticated
 
+```
+
+## Cloud Run Jobs
+
+`generate_property_map_tiles` is a Cloud Run job (not a Cloud Function). It downloads the property GeoJSON from Cloud Storage, converts it to vector tiles using `ogr2ogr`, and uploads the tiles to the public bucket.
+
+### Deployment
+
+Create the Artifact Registry repository (if it doesn't exist), build the container image, and deploy the job:
+
+```pwsh
+# Create the Artifact Registry repository for Docker images.
+gcloud artifacts repositories create cama `
+    --repository-format=docker `
+    --location=us-east4 `
+    --quiet || echo "Repository already exists."
+
+# Build the container image with Cloud Build.
+gcloud builds submit tasks/generate_property_map_tiles `
+    --tag=us-east4-docker.pkg.dev/musa5090s26-team5/cama/generate-property-map-tiles
+
+# Deploy the Cloud Run job.
+gcloud run jobs deploy generate-property-map-tiles `
+    --image=us-east4-docker.pkg.dev/musa5090s26-team5/cama/generate-property-map-tiles `
+    --region=us-east4
+```
+
+### Execution
+
+```pwsh
+gcloud run jobs execute generate-property-map-tiles --region=us-east4 --wait
 ```
 
 ## Workflow
@@ -404,6 +435,9 @@ gcloud functions call create-training-data --region=us-east4
 gcloud functions call create-tax-year-assessment-bins --region=us-east4
 gcloud functions call generate-tax-year-chart-config --region=us-east4
 gcloud functions call export-property-tile-info --region=us-east4
+
+# Generate property map tiles (Cloud Run job).
+gcloud run jobs execute generate-property-map-tiles --region=us-east4 --wait
 ```
 
 Scheduler:
