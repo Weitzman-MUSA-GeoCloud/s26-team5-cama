@@ -34,6 +34,10 @@
            Driven by current_assessment_bins.json (issue #5/#19). -->
       <section class="chart-section">
         <h2>Predicted Assessment Value Distribution</h2>
+        <div class="chart-year-filter">
+          <label for="current-year-select">Year:</label>
+          <select id="current-year-select"></select>
+        </div>
         <div class="chart-container" id="current-assessment-chart"></div>
       </section>
 
@@ -75,23 +79,53 @@
            MapLibre GL JS mounts canvas into this element. -->
       <div id="map"></div>
 
-      <!-- Example property popup (hidden by default, shown on click). -->
+      <!-- Property popup shown on click of a property in vector tile layer.
+           Populated dynamically by `populatePropertyPopup` below. -->
       <div class="property-popup" id="property-popup" hidden>
-        <h3 class="popup-address">1234 Sesame St</h3>
+        <h3 class="popup-address" id="popup-address">&mdash;</h3>
         <table class="popup-details">
           <tr>
-            <td class="popup-label">Current:</td>
-            <td class="popup-value">$275,400</td>
+            <td class="popup-label">Predicted:</td>
+            <td class="popup-value" id="popup-predicted">&mdash;</td>
           </tr>
           <tr>
-            <td class="popup-label">2023:</td>
-            <td class="popup-value">$225,200</td>
+            <td class="popup-label">Tax year:</td>
+            <td class="popup-value" id="popup-tax-year">&mdash;</td>
           </tr>
           <tr>
             <td class="popup-label">Change:</td>
-            <td class="popup-value popup-change-up">&uarr; 22.3%</td>
+            <td class="popup-value" id="popup-change">&mdash;</td>
           </tr>
         </table>
+
+        <!-- Margin of Error: 80% prediction interval from quantile
+             models. Shows reviewers how confident model
+             is for this specific property. -->
+        <div class="moe-section">
+          <div class="moe-header">
+            <span class="moe-label">80% confidence range</span>
+            <span class="moe-range" id="popup-moe-range">&mdash;</span>
+          </div>
+          <div class="moe-bar" aria-hidden="true">
+            <div class="moe-bar-fill" id="popup-moe-fill"></div>
+            <div class="moe-bar-marker" id="popup-moe-marker"></div>
+          </div>
+          <div class="moe-endpoints">
+            <span id="popup-moe-low">&mdash;</span>
+            <span id="popup-moe-high">&mdash;</span>
+          </div>
+        </div>
+
+        <!-- Explainability of top features driving model, with this
+             property's value alongside each one. -->
+        <div class="drivers-section">
+          <h4 class="drivers-title">Why this prediction?</h4>
+          <ul class="drivers-list" id="popup-drivers"></ul>
+          <p class="drivers-footnote">
+            Importance reflects the model's overall reliance on each
+            feature, not its effect on this property alone.
+          </p>
+        </div>
       </div>
     </main>
   </div>
@@ -142,7 +176,7 @@
     // Fetch from public GCS bucket in future:
     // https://storage.googleapis.com/musa5090s26-team5-public/configs/tax_year_assessment_bins.json
     // Below currently uses local dummy data file.
-    const TAX_YEAR_BINS_URL = "../configs/dummy_tax_year_assessment_bins.json";
+    const TAX_YEAR_BINS_URL = "https://storage.googleapis.com/musa5090s26-team5-public/configs/tax_year_assessment_bins.json";
 
     function formatDollar(value) {
       if (value >= 1_000_000) return "$" + (value / 1_000_000).toFixed(1) + "M";
@@ -212,62 +246,294 @@
     // Fetch from public GCS bucket in future:
     // https://storage.googleapis.com/musa5090s26-team5-public/configs/current_assessment_bins.json
     // Below currently uses local dummy data file.
-    const CURRENT_BINS_URL = "../configs/dummy_current_assessment_bins.json";
+    const CURRENT_BINS_URL = "https://storage.googleapis.com/musa5090s26-team5-public/configs/current_assessment_bins.json";
+
+    let currentAssessmentChart = null;
+
+    function renderCurrentAssessmentChart(bins) {
+      const categories = bins.map((b) => {
+        const upper = b.upper_bound >= 999_999_999 ? "+" : " \u2013 " + formatDollar(b.upper_bound);
+        return formatDollar(b.lower_bound) + upper;
+      });
+      const counts = bins.map((b) => b.property_count);
+
+      const options = {
+        chart: {
+          type: "bar",
+          height: 220,
+          toolbar: { show: false },
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+        },
+        series: [{ name: "Properties", data: counts }],
+        xaxis: {
+          categories,
+          labels: {
+            rotate: -45,
+            rotateAlways: true,
+            style: { fontSize: "10px" },
+          },
+        },
+        yaxis: {
+          title: { text: "# Properties" },
+          labels: {
+            formatter: (val) => val >= 1000 ? (val / 1000).toFixed(0) + "K" : val,
+          },
+        },
+        colors: ["#F2541B"],
+        plotOptions: {
+          bar: { borderRadius: 2, columnWidth: "70%" },
+        },
+        dataLabels: { enabled: false },
+        tooltip: {
+          y: {
+            formatter: (val) => val.toLocaleString() + " properties",
+          },
+        },
+      };
+
+      if (currentAssessmentChart) {
+        currentAssessmentChart.destroy();
+      }
+      currentAssessmentChart = new ApexCharts(
+        document.querySelector("#current-assessment-chart"),
+        options
+      );
+      currentAssessmentChart.render();
+    }
 
     fetch(CURRENT_BINS_URL)
       .then((res) => res.json())
-      .then((bins) => {
-        const categories = bins.map((b) => {
-          const upper = b.upper_bound >= 999_999_999 ? "+" : " \u2013 " + formatDollar(b.upper_bound);
-          return formatDollar(b.lower_bound) + upper;
+      .then((allBins) => {
+        // Populate year filter from tax_year values present in the data.
+        const years = [...new Set(allBins.map((b) => b.tax_year))].sort((a, b) => b - a);
+        const yearSelect = document.querySelector("#current-year-select");
+        years.forEach((yr) => {
+          const opt = document.createElement("option");
+          opt.value = yr;
+          opt.textContent = yr;
+          yearSelect.appendChild(opt);
         });
-        const counts = bins.map((b) => b.property_count);
 
-        const options = {
-          chart: {
-            type: "bar",
-            height: 220,
-            toolbar: { show: false },
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-          },
-          series: [{ name: "Properties", data: counts }],
-          xaxis: {
-            categories,
-            labels: {
-              rotate: -45,
-              rotateAlways: true,
-              style: { fontSize: "10px" },
-            },
-          },
-          yaxis: {
-            title: { text: "# Properties" },
-            labels: {
-              formatter: (val) => val >= 1000 ? (val / 1000).toFixed(0) + "K" : val,
-            },
-          },
-          colors: ["#F2541B"],
-          plotOptions: {
-            bar: { borderRadius: 2, columnWidth: "70%" },
-          },
-          dataLabels: { enabled: false },
-          tooltip: {
-            y: {
-              formatter: (val) => val.toLocaleString() + " properties",
-            },
-          },
-        };
+        // Render chart for the most recent year on initial load.
+        const latestYear = years[0];
+        renderCurrentAssessmentChart(allBins.filter((b) => b.tax_year === latestYear));
 
-        const chart = new ApexCharts(
-          document.querySelector("#current-assessment-chart"),
-          options
-        );
-        chart.render();
+        // Re-render whenever the user selects a different year.
+        yearSelect.addEventListener("change", () => {
+          const selected = Number(yearSelect.value);
+          renderCurrentAssessmentChart(allBins.filter((b) => b.tax_year === selected));
+        });
       })
       .catch((err) => {
         console.error("Failed to load current assessment bins:", err);
         document.querySelector("#current-assessment-chart").textContent =
           "Chart data unavailable.";
       });
+  </script>
+
+  <script>
+    // Property popup with prediction, margin of error, and explainability.
+    // Currently really simple with one click handler + one render
+    // function. Work in progress.
+
+    const PROPERTY_TILES_URL =
+      "https://storage.googleapis.com/musa5090s26-team5-public/tiles/properties/{z}/{x}/{y}.pbf";
+    const PROPERTY_TILE_LAYER = "property_tile_info";
+    const FEATURE_IMPORTANCES_URL =
+      "https://storage.googleapis.com/musa5090s26-team5-public/configs/model_feature_importances.json";
+
+    // How many top features to show in explainability list.
+    const TOP_DRIVERS_COUNT = 3;
+
+    // Global importances are loaded once and reused for every popup.
+    let featureImportances = [];
+
+    // Format helpers.
+    const fmtUsd = (n) =>
+      n == null || isNaN(n)
+        ? "\u2014"
+        : "$" + Math.round(n).toLocaleString();
+    const fmtPct = (n) =>
+      n == null || isNaN(n)
+        ? "\u2014"
+        : (n * 100).toFixed(1) + "%";
+
+    // Pretty-print a feature value based on its name.
+    function formatFeatureValue(featureName, props) {
+      switch (featureName) {
+        case "total_livable_area":
+          return props.total_livable_area != null
+            ? Math.round(props.total_livable_area).toLocaleString() + " sqft"
+            : "n/a";
+        case "number_of_bathrooms":
+          return props.number_of_bathrooms != null
+            ? String(props.number_of_bathrooms)
+            : "n/a";
+        case "property_age": {
+          const yb = props.year_built;
+          if (yb == null || isNaN(yb)) return "n/a";
+          return new Date().getFullYear() - Number(yb) + " yrs";
+        }
+        case "interior_condition":
+          return props.interior_condition != null
+            ? "Grade " + props.interior_condition
+            : "n/a";
+        case "assessed_value_2023":
+          return fmtUsd(props.assessed_value_2023);
+        case "assessed_value_2024":
+          return fmtUsd(props.assessed_value_2024);
+        case "assessed_value_2025":
+          return fmtUsd(props.assessed_value_2025);
+        case "neighborhood":
+        case "neighborhood_median_price":
+          return props.neighborhood || "n/a";
+        case "sale_year":
+          return props.sale_year != null ? String(props.sale_year) : "n/a";
+        default:
+          return "n/a";
+      }
+    }
+
+    // Fill in popup using a property's tile properties + global
+    // feature importances loaded above.
+    function populatePropertyPopup(props) {
+      const popup = document.getElementById("property-popup");
+
+      document.getElementById("popup-address").textContent =
+        props.address || "Property " + (props.property_id ?? "");
+
+      const predicted = props.current_assessed_value;
+      const lower = props.current_assessed_value_lower;
+      const upper = props.current_assessed_value_upper;
+      const taxYear = props.tax_year_assessed_value;
+
+      document.getElementById("popup-predicted").textContent = fmtUsd(predicted);
+      document.getElementById("popup-tax-year").textContent =
+        taxYear != null ? fmtUsd(taxYear) + " (" + (props.tax_year ?? "") + ")" : "\u2014";
+
+      const changeEl = document.getElementById("popup-change");
+      if (props.pct_change == null || isNaN(props.pct_change)) {
+        changeEl.textContent = "\u2014";
+        changeEl.className = "popup-value";
+      } else {
+        const up = props.pct_change >= 0;
+        changeEl.textContent = (up ? "\u2191 " : "\u2193 ") + fmtPct(props.pct_change);
+        changeEl.className = "popup-value " + (up ? "popup-change-up" : "popup-change-down");
+      }
+
+      // Margin of error bar. Bar represents range
+      // [lower, upper]. Marker shows point prediction.
+      const moeRange = document.getElementById("popup-moe-range");
+      const moeFill = document.getElementById("popup-moe-fill");
+      const moeMarker = document.getElementById("popup-moe-marker");
+      const moeLow = document.getElementById("popup-moe-low");
+      const moeHigh = document.getElementById("popup-moe-high");
+
+      if (lower != null && upper != null && predicted != null && upper > lower) {
+        const halfWidth = (upper - lower) / 2;
+        const pctOfPredicted = predicted > 0 ? (halfWidth / predicted) * 100 : null;
+        moeRange.textContent =
+          "\u00B1 " +
+          fmtUsd(halfWidth) +
+          (pctOfPredicted != null ? " (" + pctOfPredicted.toFixed(0) + "%)" : "");
+        moeLow.textContent = fmtUsd(lower);
+        moeHigh.textContent = fmtUsd(upper);
+        
+        // Scale fill to span full bar. Place marker proportional
+        // to where point prediction sits in [lower, upper].
+        moeFill.style.left = "0%";
+        moeFill.style.width = "100%";
+        const pos = Math.max(0, Math.min(100, ((predicted - lower) / (upper - lower)) * 100));
+        moeMarker.style.left = pos + "%";
+        moeMarker.hidden = false;
+      } else {
+        moeRange.textContent = "\u2014";
+        moeLow.textContent = "\u2014";
+        moeHigh.textContent = "\u2014";
+        moeFill.style.width = "0%";
+        moeMarker.hidden = true;
+      }
+
+      // Explainability list. Pick top-N features and show this property's
+      // value next to each. Could consider computing per-property SHAP values
+      // in future, but would require shipping model to browser.
+      // Global importances + this property's actual feature values give
+      // reviewers a useful surface-level explanation.
+      const driversEl = document.getElementById("popup-drivers");
+      driversEl.innerHTML = "";
+      const top = featureImportances.slice(0, TOP_DRIVERS_COUNT);
+      if (top.length === 0) {
+        driversEl.innerHTML =
+          '<li class="drivers-empty">Feature importances not loaded yet.</li>';
+      } else {
+        const maxImp = top[0].importance || 1;
+        for (const f of top) {
+          const li = document.createElement("li");
+          li.className = "driver-item";
+          const widthPct = Math.round((f.importance / maxImp) * 100);
+          li.innerHTML =
+            '<div class="driver-row">' +
+            '  <span class="driver-label">' + f.label + "</span>" +
+            '  <span class="driver-value">' + formatFeatureValue(f.feature, props) + "</span>" +
+            "</div>" +
+            '<div class="driver-bar"><div class="driver-bar-fill" style="width:' + widthPct + '%"></div></div>' +
+            '<div class="driver-importance">' + (f.importance * 100).toFixed(1) + "% importance</div>";
+          driversEl.appendChild(li);
+        }
+      }
+
+      popup.hidden = false;
+    }
+
+    // Load global feature importances once. Failures are non-fatal as
+    // popup still shows prediction + MOE without drivers list.
+    fetch(FEATURE_IMPORTANCES_URL)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data) => {
+        featureImportances = Array.isArray(data.features) ? data.features : [];
+      })
+      .catch((err) => {
+        console.warn("Feature importances unavailable:", err);
+      });
+
+    // Hook up property tile layer + click handler once map is
+    // ready. Add a transparent fill purely so clicks register if no
+    // styled layer exists yet. If source/layer are already added
+    // elsewhere, this is safe to skip.
+    map.on("load", () => {
+      if (!map.getSource("property-tiles")) {
+        map.addSource("property-tiles", {
+          type: "vector",
+          tiles: [PROPERTY_TILES_URL],
+          minzoom: 10,
+          maxzoom: 16,
+        });
+      }
+      if (!map.getLayer("property-tiles-clickable")) {
+        map.addLayer({
+          id: "property-tiles-clickable",
+          type: "fill",
+          source: "property-tiles",
+          "source-layer": PROPERTY_TILE_LAYER,
+          paint: {
+            "fill-color": "#000000",
+            "fill-opacity": 0,
+          },
+        });
+      }
+
+      map.on("click", "property-tiles-clickable", (e) => {
+        if (!e.features || e.features.length === 0) return;
+        populatePropertyPopup(e.features[0].properties || {});
+      });
+
+      map.on("mouseenter", "property-tiles-clickable", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "property-tiles-clickable", () => {
+        map.getCanvas().style.cursor = "";
+      });
+    });
   </script>
 </body>
 
