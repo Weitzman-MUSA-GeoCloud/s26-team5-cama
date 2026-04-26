@@ -184,17 +184,6 @@ main:
                         timeout: 1800
                       result: create_training_data_result
 
-            - generate_map_styling_metadata:
-                steps:
-                  - run_generate_map_stlying_metadata:
-                      call: http.post
-                      args:
-                        url: ${base_url + "/generate-map-styling-metadata"}
-                        auth:
-                          type: OIDC
-                        timeout: 1800
-                      result: generate_map_styling_metadata_result
-
             - create_tax_year_assessment_bins:
                 steps:
                   - run_create_tax_year_assessment_bins:
@@ -205,7 +194,7 @@ main:
                           type: OIDC
                         timeout: 1800
                       result: create_tax_year_assessment_bins_result
-                    
+
             - generate_tax_year_chart_config:
                 steps:
                   - run_generate_tax_year_chart_config:
@@ -217,40 +206,58 @@ main:
                         timeout: 1800
                       result: generate_tax_year_chart_config_result
 
-            - generate_tax_assessment_chart_configs:
-                steps:
-                  - run_generate_tax_assessment_chart_configs:
-                      call: http.post
-                      args:
-                        url: ${base_url + "/generate-tax-assessment-chart-configs"}
-                        auth:
-                          type: OIDC
-                        timeout: 1800
-                      result: generate_tax_assessment_chart_configs_result
+    # Sequential model-dependent steps. These all read from
+    # `derived.current_assessments`, which is produced by the
+    # `run-current-assessments-model` step.
+    - run_model_dependent_steps:
+        steps:
+          - run_current_assessments_model:
+              call: http.post
+              args:
+                url: ${base_url + "/run-current-assessments-model"}
+                auth:
+                  type: OIDC
+                timeout: 1800
+              result: run_current_assessments_model_result
 
-            - export_property_tile_info:
-                steps:
-                  - run_export_property_tile_info:
-                      call: http.post
-                      args:
-                        url: ${base_url + "/export-property-tile-info"}
-                        auth:
-                          type: OIDC
-                        timeout: 1800
-                      result: export_property_tile_info_result
+          - run_create_current_assessment_bins:
+              call: http.post
+              args:
+                url: ${base_url + "/create-current-assessment-bins"}
+                auth:
+                  type: OIDC
+                timeout: 1800
+              result: create_current_assessment_bins_result
 
-            - create_current_assessment_bins:
-                steps:
-                  - run_create_current_assessment_bins:
-                      call: http.post
-                      args:
-                        url: ${base_url + "/create-current-assessment-bins"}
-                        auth:
-                          type: OIDC
-                        timeout: 1800
-                      result: create_current_assessment_bins_result
+          - run_generate_assessment_chart_config:
+              call: http.post
+              args:
+                url: ${base_url + "/generate-assessment-chart-config"}
+                auth:
+                  type: OIDC
+                timeout: 1800
+              result: generate_assessment_chart_config_result
 
-       
+          - run_generate_map_styling_metadata:
+              call: http.post
+              args:
+                url: ${base_url + "/generate-map-styling-metadata"}
+                auth:
+                  type: OIDC
+                timeout: 1800
+              result: generate_map_styling_metadata_result
+
+          # Tile export runs after model so GeoJSON contains
+          # latest predicted values plus MOE columns.
+          - run_export_property_tile_info:
+              call: http.post
+              args:
+                url: ${base_url + "/export-property-tile-info"}
+                auth:
+                  type: OIDC
+                timeout: 1800
+              result: export_property_tile_info_result
+
     - generate_property_map_tiles:
         steps:
           - run_generate_property_map_tiles:
