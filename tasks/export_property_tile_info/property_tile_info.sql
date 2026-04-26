@@ -71,6 +71,9 @@ SELECT
     -- Hover tooltip fields
     p.location AS address,
     ca.predicted_value AS current_assessed_value,
+    -- 80% prediction interval from quantile models (explainability/MOE).
+    ca.predicted_value_lower AS current_assessed_value_lower,
+    ca.predicted_value_upper AS current_assessed_value_upper,
     la.tax_year_assessed_value,
     la.tax_year,
     ROUND(
@@ -88,18 +91,19 @@ SELECT
     SAFE_CAST(p.total_livable_area AS FLOAT64) AS total_livable_area,
     SAFE_CAST(p.number_of_bathrooms AS FLOAT64) AS number_of_bathrooms,
     SAFE_CAST(p.interior_condition AS FLOAT64) AS interior_condition,
-    EXTRACT(YEAR FROM p.sale_date) AS sale_year,
+    SAFE_CAST(p.year_built AS INT64) AS year_built,
+    EXTRACT(YEAR FROM SAFE_CAST(p.sale_date AS DATE)) AS sale_year,
     n.name AS neighborhood
 
 FROM `musa5090s26-team5.core.opa_properties` AS p
 INNER JOIN `musa5090s26-team5.core.pwd_parcels` AS pwd
     ON pwd.property_id = p.parcel_number
 LEFT JOIN latest_assessment AS la
-    ON p.parcel_number = la.parcel_number
+    ON p.parcel_number = CAST(la.parcel_number AS STRING)
 LEFT JOIN `musa5090s26-team5.derived.current_assessments` AS ca
     ON p.parcel_number = ca.property_id
 LEFT JOIN assessments_pivot AS ap
-    ON p.parcel_number = ap.parcel_number
+    ON p.parcel_number = CAST(ap.parcel_number AS STRING)
 LEFT JOIN `musa5090s26-team5.core.neighborhoods` AS n
     ON ST_WITHIN(
         p.geometry,

@@ -8,10 +8,9 @@
 # https://docs.docker.com/develop/develop-images/multistage-build/#use-multi-stage-builds
 FROM gcr.io/google.com/cloudsdktool/cloud-sdk:slim
 
-RUN apt-get update
-
-# Install GDAL for ogr2ogr
-RUN apt-get install -y gdal-bin
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gdal-bin && \
+    rm -rf /var/lib/apt/lists/*
 
 # Execute next commands in the directory /workspace
 WORKDIR /workspace
