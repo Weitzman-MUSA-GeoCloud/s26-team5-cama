@@ -233,6 +233,154 @@ strong, b {
   color: #F2541B;
 }
 
+/* Margin of Error (MOE) section.
+   Visualizes 80% prediction interval for popup property.
+   Bar runs from lower bound to upper bound. Marker
+   shows where point prediction sits within that range. */
+
+.property-popup {
+  /* Allow popup to grow when explainability section is shown. */
+  min-width: 240px;
+  max-width: 280px;
+}
+
+.moe-section {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+.moe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.moe-label {
+  font-size: 0.75rem;
+  color: #555;
+  font-style: italic;
+}
+
+.moe-range {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2C3968;
+}
+
+.moe-bar {
+  position: relative;
+  height: 6px;
+  background: #eee;
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.moe-bar-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #c9d0e0; /* Light navy. */
+  border-radius: 3px;
+}
+
+.moe-bar-marker {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 10px;
+  background: #2C3968;
+  transform: translateX(-1px);
+}
+
+.moe-endpoints {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  font-size: 0.7rem;
+  color: #888;
+}
+
+/* Explainability section.
+   Lists top features driving model along with this property's
+   own value for each. Bars are scaled relative to most-important
+   feature so reviewers can eyeball relative contributions. */
+
+.drivers-section {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+.drivers-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2C3968;
+  margin-bottom: 6px;
+}
+
+.drivers-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.driver-item {
+  margin-bottom: 8px;
+}
+
+.driver-item:last-child {
+  margin-bottom: 0;
+}
+
+.driver-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  margin-bottom: 2px;
+}
+
+.driver-label {
+  color: #333;
+}
+
+.driver-value {
+  color: #555;
+  font-weight: 600;
+}
+
+.driver-bar {
+  height: 4px;
+  background: #f1f1f1;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.driver-bar-fill {
+  height: 100%;
+  background: #F2541B; /* Brand orange to differentiate from MOE bar. */
+}
+
+.driver-importance {
+  font-size: 0.65rem;
+  color: #999;
+  margin-top: 2px;
+}
+
+.drivers-empty {
+  font-size: 0.75rem;
+  color: #888;
+  font-style: italic;
+}
+
+.drivers-footnote {
+  margin-top: 6px;
+  font-size: 0.65rem;
+  color: #aaa;
+  line-height: 1.3;
+}
+
 /* Utility
    Visually hides element while keeping accessible to screen readers.
    Used on <legend> inside layer toggle fieldset. */
