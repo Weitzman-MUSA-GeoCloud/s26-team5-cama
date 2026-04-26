@@ -281,7 +281,6 @@ main:
             septa: "Completed"
             create_training_data: "Completed"
             tax_year_assessment_bins: "Completed"
-            predict_assessments: "Completed"
             current_assessment_bins: "Completed"
             export_property_tile_info: "Completed"
             generate_property_map_tiles: "Completed"
