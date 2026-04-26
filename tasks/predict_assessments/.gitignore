@@ -1,3 +1,0 @@
-# model.pkl is a copy of eda/model.pkl placed here at deploy time.
-# eda/model.pkl is the single source of truth -- don't commit a duplicate.
-model.pkl
