@@ -20,7 +20,7 @@ SQL_QUERY = """
         SELECT
             MIN(predicted_value) AS predicted_min,
             MAX(predicted_value) AS predicted_max,
-            APPROX_QUANTILES(predicted_value, 4) AS predicted_breakpoints)
+            APPROX_QUANTILES(predicted_value, 4) AS predicted_breakpoints
         FROM `derived.current_assessments`
         WHERE predicted_value IS NOT NULL AND predicted_value >0
     ),
@@ -38,7 +38,7 @@ SQL_QUERY = """
 
 
 @functions_framework.http
-def export_map_styling(request):
+def generate_map_styling_metadata(request):
     try:
         public_bucket = os.getenv("PUBLIC_BUCKET", "musa5090s26-team5-public")
 

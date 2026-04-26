@@ -18,13 +18,14 @@ SQL_QUERY = """
         lower_bound,
         upper_bound,
         property_count,
+        EXTRACT(YEAR FROM CURRENT_DATE()) AS tax_year
     FROM `derived.current_assessment_bins`
     ORDER BY lower_bound
 """
 
 
 @functions_framework.http
-def generate_assessment_chart_configs(request):
+def generate_assessment_chart_config(request):
     try:
         public_bucket = os.getenv("PUBLIC_BUCKET", "musa5090s26-team5-public")
 
@@ -39,7 +40,8 @@ def generate_assessment_chart_configs(request):
             {
                 "lower_bound": row.lower_bound,
                 "upper_bound": row.upper_bound,
-                "property_count": row.property_count
+                "property_count": row.property_count,
+                "tax_year": row.tax_year,
             }
             for row in results
         ]
