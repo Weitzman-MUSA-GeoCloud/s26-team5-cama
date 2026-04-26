@@ -200,6 +200,15 @@ strong, b {
   box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
 }
 
+@media (width <= 768px) {
+  .property-popup {
+    right: 50%;
+    transform: translateX(50%);
+    bottom: 16px;
+    max-width: 85vw;
+  }
+}
+
 .popup-address {
   font-size: 0.95rem;
   font-weight: 700;
@@ -437,14 +446,6 @@ strong, b {
     font-size: 0.75rem;
     padding: 8px 10px;
     max-width: 70vw; /* Prevent overflow on narrow screens. */
-  }
-
-  /* Move property popup to bottom-center for thumb reach. */
-  .property-popup {
-    right: 50%;
-    transform: translateX(50%);
-    bottom: 16px;
-    max-width: 85vw;
   }
 }
 
