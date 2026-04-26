@@ -228,6 +228,28 @@ main:
                         timeout: 1800
                       result: generate_tax_assessment_chart_configs_result
 
+    # Issue #12: run the trained model on every residential property and
+    # write predictions to derived.current_assessments. Must finish before
+    # any task that reads from derived.current_assessments.
+    - predict_assessments:
+        steps:
+          - run_predict_assessments:
+              call: http.post
+              args:
+                url: ${base_url + "/predict-assessments"}
+                auth:
+                  type: OIDC
+                timeout: 1800
+              result: predict_assessments_result
+
+    # Tasks below depend on derived.current_assessments existing.
+    # Moved out of run_derived_in_parallel as part of Issue #12 -- they
+    # were running before predictions were written, which broke any clean
+    # automated run of the pipeline.
+    - run_predictions_dependent_in_parallel:
+        parallel:
+          shared: []
+          branches:
             - export_property_tile_info:
                 steps:
                   - run_export_property_tile_info:
@@ -250,7 +272,6 @@ main:
                         timeout: 1800
                       result: create_current_assessment_bins_result
 
-       
     - generate_property_map_tiles:
         steps:
           - run_generate_property_map_tiles:
@@ -274,6 +295,7 @@ main:
             septa: "Completed"
             create_training_data: "Completed"
             tax_year_assessment_bins: "Completed"
+            predict_assessments: "Completed"
             current_assessment_bins: "Completed"
             export_property_tile_info: "Completed"
             generate_property_map_tiles: "Completed"

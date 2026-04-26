@@ -1,0 +1,8 @@
+functions-framework==3.*
+google-cloud-bigquery==3.*
+pandas==2.*
+pyarrow==17.*
+db-dtypes==1.*
+scikit-learn==1.8.*
+joblib==1.*
+numpy==2.*

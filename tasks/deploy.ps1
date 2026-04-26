@@ -294,6 +294,24 @@ gcloud functions deploy generate-tax-year-chart-config `
     --memory=512MB `
     --no-allow-unauthenticated
 
+# Predict Assessments (Issue #12).
+# Copy the trained model bundle into the function source dir so gcloud
+# bundles it. eda/model.pkl is the single source of truth; the copy in
+# tasks/predict_assessments/ is gitignored.
+Write-Host "Deploying predict-assessments."
+Copy-Item -Path "eda/model.pkl" `
+    -Destination "tasks/predict_assessments/model.pkl" -Force
+gcloud functions deploy predict-assessments `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/predict_assessments `
+    --entry-point=predict_assessments `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=8GB `
+    --no-allow-unauthenticated
+
 Write-Host "Workflow" -ForegroundColor Green
 
 # Extract Property Tile Info.
