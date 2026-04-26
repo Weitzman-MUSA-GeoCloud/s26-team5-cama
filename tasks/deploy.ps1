@@ -15,6 +15,13 @@ $REGION = "us-east4"
 $RAW_DATA_BUCKET = "musa5090s26-team5-raw_data"
 $PREPARED_DATA_BUCKET = "musa5090s26-team5-prepared_data"
 
+# Create Artifact Registry repository for container images.
+Write-Host "Creating Artifact Registry repository" -ForegroundColor Green
+gcloud artifacts repositories create cama `
+    --repository-format=docker `
+    --location=$REGION `
+    --quiet || Write-Host "Repository already exists."
+
 Write-Host "Extract Functions" -ForegroundColor Green
 
 # Extract OPA Properties.
@@ -267,8 +274,12 @@ gcloud functions deploy generate-assessment-chart-config `
     --region=$REGION `
     --source=tasks/generate_assessment_chart_config `
     --entry-point=generate_assessment_chart_config `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
 
-# Current Assessment Bins (Issue #8).
+# Current Assessment Bins.
 Write-Host "Deploying create-current-assessment-bins."
 gcloud functions deploy create-current-assessment-bins `
     --gen2 `
@@ -279,6 +290,26 @@ gcloud functions deploy create-current-assessment-bins `
     --trigger-http `
     --timeout=1800s `
     --memory=512MB `
+    --no-allow-unauthenticated
+
+# Run Current Assessments Model.
+# Trains gradient boosting model + 10th/90th percentile quantile
+# models, then writes predictions and an 80% prediction interval
+# (margin of error) to derived.current_assessments. Also publishes
+# global feature importances to the public bucket for the UI's
+# explainability panel.
+Write-Host "Deploying run-current-assessments-model."
+gcloud functions deploy run-current-assessments-model `
+    --gen2 `
+    --runtime=python311 `
+    --region=$REGION `
+    --source=tasks/run_current_assessments_model `
+    --entry-point=run_current_assessments_model `
+    --trigger-http `
+    --set-env-vars "PUBLIC_BUCKET=musa5090s26-team5-public" `
+    --timeout=1800s `
+    --memory=8GB `
+    --cpu=2 `
     --no-allow-unauthenticated
 
 # Tax Year Chart Config.
@@ -311,12 +342,16 @@ gcloud functions deploy export-property-tile-info `
 
 # Generate tiles for the property tile info.
 Write-Host "Deploying generate-property-map-tiles."
-gcloud builds submit tasks/generate_property_map_tiles `  
---tag=$REGION-docker.pkg.dev/$PROJECT_ID/cama/generate-property-map-tiles 
+gcloud builds submit tasks/generate_property_map_tiles `
+    --tag=$REGION-docker.pkg.dev/$PROJECT_ID/cama/generate-property-map-tiles
 
-gcloud run jobs deploy generate-property-map-tiles `  
---image=$REGION-docker.pkg.dev/$PROJECT_ID/cama/generate-property-map-tiles `  
---region=$REGION
+gcloud run jobs deploy generate-property-map-tiles `
+    --image=$REGION-docker.pkg.dev/$PROJECT_ID/cama/generate-property-map-tiles `
+    --region=$REGION
+
+gcloud run jobs execute generate-property-map-tiles `
+    --region=$REGION `
+    --wait
 
 # Export map styling metadata.
 Write-Host "Deploying generate-map-styling-metadata"
