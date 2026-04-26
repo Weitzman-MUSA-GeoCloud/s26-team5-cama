@@ -18,17 +18,17 @@ import os
 SQL_QUERY = """
     WITH predicted AS (
         SELECT
-            MIN(predicted_value) AS min,
-            MAX(predicted_value) AS max,
-            APPROX_QUANTILES(predicted_value, 4) AS breakpoints)
+            MIN(predicted_value) AS predicted_min,
+            MAX(predicted_value) AS predicted_max,
+            APPROX_QUANTILES(predicted_value, 4) AS predicted_breakpoints)
         FROM `derived.current_assessments`
         WHERE predicted_value IS NOT NULL AND predicted_value >0
     ),
     tax_year AS (
         SELECT
-            MIN(market_value) AS min,
-            MAX(market_value) AS max,
-            APPROX_QUANTILES(market_value, 4) AS breakpoints
+            MIN(market_value) AS tax_year_min,
+            MAX(market_value) AS tax_year_max,
+            APPROX_QUANTILES(market_value, 4) AS tax_year_breakpoints
         FROM `core.opa_assessments`
         WHERE market_value IS NOT NULL AND market_value >0
             AND year = (SELECT MAX(year) FROM `core.opa_assessments`)
@@ -52,17 +52,18 @@ def export_map_styling(request):
         styling_metadata = {}
         for row in results:
             styling_metadata = {
-                "sale_price": {
-                    "min": row.min,
-                    "max": row.max,
-                    "breakpoints": list(row.breakpoints)
+                "predicted_value": {
+                    "min": row.predicted_min,
+                    "max": row.predicted_max,
+                    "breakpoints": list(row.predicted_breakpoints)
                 },
-                "year_built": {
-                    "min": row.year_built_min,
-                    "max": row.year_built_max,
-                    "breakpoints": list(row.year_built_breakpoints)
+                "market_value" : {
+                    "min": row.tax_year_min,
+                    "max": row.tax_year_max,
+                    "breakpoints": list(row.tax_year_breakpoints)
                 }
             }
+                
             print(f"Processed row: { styling_metadata}")
 
         # Upload to public GCS bucket.
