@@ -1,87 +1,77 @@
-# predict_assessments
+# run_current_assessments_model
 
-Cloud Function that scores the trained property valuation model on every
-residential property in Philadelphia and writes the predictions back to
-BigQuery.
-
-Issue #12 (deployment of the Issue #11 model).
+Cloud Function that trains a property valuation model at runtime and writes predictions to BigQuery.
 
 ## What it does
 
-1. Loads the model bundle from `model.pkl` (a copy of `eda/model.pkl`,
-   placed here at deploy time -- see `../deploy.ps1`).
-2. Reads features for all residential properties from BigQuery via
-   `predict_assessments.sql` (mirrors the feature derivation in
-   `../create_training_data/create_training_data.sql`).
-3. Applies the same preprocessing the training notebook applied:
-   imputes missing values from `bundle["medians"]`, looks up
-   `neighborhood_median_price` from `bundle["neighborhood_price_map"]`
-   (with `bundle["global_price_fallback"]` for unseen neighborhoods),
-   and label-encodes `neighborhood` using
-   `bundle["label_encoders"]["neighborhood"]`.
-4. Runs `bundle["model"].predict()`.
-5. Overwrites `derived.current_assessments` (`property_id`,
-   `predicted_value`, `predicted_at`).
+On each invocation:
 
-## Model bundle contract
+1. Pulls training data from `derived.current_assessments_model_training_data`
+2. Trains three `GradientBoostingRegressor` models:
+   - **Main model** (least-squares) → `predicted_value`
+   - **Lower quantile** (α = 0.1) → `predicted_value_lower`
+   - **Upper quantile** (α = 0.9) → `predicted_value_upper`
+3. Predicts on all residential properties in `core.opa_properties`
+4. Writes results to `derived.current_assessments` (WRITE_TRUNCATE)
+5. Uploads feature importances JSON to GCS for the reviewer UI explainability panel
 
-`model.pkl` is a dict with these keys:
+## Output table: `derived.current_assessments`
 
-| Key | Type | Purpose |
+| Column | Type | Description |
 |---|---|---|
-| `model` | `GradientBoostingRegressor` | The trained estimator. |
-| `label_encoders` | `dict[str, LabelEncoder]` | Encoders for categorical features (currently only `neighborhood`). |
-| `medians` | `dict[str, float]` | Per-feature imputation values from training. |
-| `neighborhood_price_map` | `dict[str, float]` | Median sale price per neighborhood from training. |
-| `global_price_fallback` | `float` | Median sale price across all training rows; used when a property's neighborhood is missing or unseen. |
+| `property_id` | `STRING` | OPA parcel number |
+| `predicted_value` | `FLOAT64` | Predicted current market value |
+| `predicted_value_lower` | `FLOAT64` | Lower bound of 80% prediction interval |
+| `predicted_value_upper` | `FLOAT64` | Upper bound of 80% prediction interval |
+| `predicted_at` | `TIMESTAMP` | When the prediction was run |
 
-`bundle["model"].feature_names_in_` is the canonical feature order:
+The table is overwritten (`WRITE_TRUNCATE`) on each run, preserving a history of how predictions change over time by comparing runs.
 
+## Features used
+
+| Feature | Label |
+|---|---|
+| `total_livable_area` | Living area (sqft) |
+| `total_area` | Total lot area (sqft) |
+| `number_of_bedrooms` | Bedrooms |
+| `number_of_bathrooms` | Bathrooms |
+| `number_stories` | Number of stories |
+| `garage_spaces` | Garage spaces |
+| `fireplaces` | Fireplaces |
+| `exterior_condition` | Exterior condition |
+| `interior_condition` | Interior condition |
+| `quality_grade` | Quality grade |
+| `year_built` | Year built |
+| `zip_code` | ZIP code |
+| `zoning` | Zoning |
+| `building_code_new` | Building code |
+
+## GCS output
+
+Feature importances are uploaded to:
 ```
-total_livable_area, number_of_bathrooms, property_age, interior_condition,
-assessed_value_2023, assessed_value_2024, assessed_value_2025,
-neighborhood, sale_year, neighborhood_median_price
-```
-
-`FEATURE_COLS` in `main.py` is kept in sync with this. **If the model is
-retrained with a different feature set, update `FEATURE_COLS` and the SQL
-together.**
-
-## Deployment
-
-```pwsh
-# From repo root.
-gcloud functions deploy predict-assessments `
-    --gen2 `
-    --runtime=python311 `
-    --region=us-east4 `
-    --source=tasks/predict_assessments `
-    --entry-point=predict_assessments `
-    --trigger-http `
-    --timeout=1800s `
-    --memory=8GB `
-    --no-allow-unauthenticated
-```
-
-`tasks/deploy.ps1` does this and also copies `eda/model.pkl` into this
-directory before deploying. `model.pkl` here is gitignored to keep
-`eda/model.pkl` as the single source of truth.
-
-## Manual invocation
-
-```pwsh
-gcloud workflows run data-pipeline --location=us-east4
-# or to invoke just this function:
-gcloud functions call predict-assessments --region=us-east4
+gs://musa5090s26-team5-public/configs/model_feature_importances.json
 ```
 
-## Notes for retraining
+Shape:
+```json
+{
+  "model": "GradientBoostingRegressor",
+  "trained_at": "2026-04-27T...",
+  "features": [
+    {"feature": "total_livable_area", "label": "Living area (sqft)", "importance": 0.35},
+    ...
+  ]
+}
+```
 
-If you retrain the model in `eda/train_model.ipynb`:
+## Pipeline position
 
-1. Save the same bundle structure (`model`, `label_encoders`, `medians`,
-   `neighborhood_price_map`, `global_price_fallback`) to `eda/model.pkl`.
-2. If the feature set changed, update `FEATURE_COLS` in `main.py` and the
-   `SELECT` clause of `predict_assessments.sql` to match.
-3. If the sklearn version changed, update the pin in `requirements.txt`.
-4. Redeploy: `./tasks/deploy.ps1` (or just the predict-assessments block).
+This function runs after `create-training-data` and before `current-assessment-bins`, `generate-assessment-chart-config`, and `export-property-tile-info`. It is scheduled weekly so the model retrains on the latest sales data.
+
+## Retraining checklist
+
+- [ ] `derived.current_assessments_model_training_data` is up to date (upstream `create-training-data` has run)
+- [ ] Cloud Function has `--memory=8GB --cpu=2` (set in `deploy.ps1`)
+- [ ] `derived.current_assessments` schema matches the five columns above
+- [ ] Feature importances JSON is accessible at the GCS path above
