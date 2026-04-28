@@ -9,7 +9,7 @@
 FROM gcr.io/google.com/cloudsdktool/cloud-sdk:slim
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gdal-bin && \
+    apt-get install -y --no-install-recommends gdal-bin dos2unix && \
     rm -rf /var/lib/apt/lists/*
 
 # Execute next commands in the directory /workspace
@@ -18,8 +18,8 @@ WORKDIR /workspace
 # Copy over the script to the /workspace directory
 COPY script.sh .
 
-# Just in case the script doesn't have the executable bit set
-RUN chmod +x ./script.sh
+# Convert Windows line endings to Unix and ensure executable
+RUN dos2unix ./script.sh && chmod +x ./script.sh
 
 # Run the script when starting the container
 CMD [ "./script.sh" ]

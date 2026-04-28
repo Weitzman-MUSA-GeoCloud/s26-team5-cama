@@ -347,7 +347,10 @@ gcloud builds submit tasks/generate_property_map_tiles `
 
 gcloud run jobs deploy generate-property-map-tiles `
     --image=$REGION-docker.pkg.dev/$PROJECT_ID/cama/generate-property-map-tiles `
-    --region=$REGION
+    --region=$REGION `
+    --task-timeout=3600s `
+    --memory=4Gi `
+    --cpu=2
 
 gcloud run jobs execute generate-property-map-tiles `
     --region=$REGION `
