@@ -87,6 +87,10 @@ tasks/
 ├── prepare_septa/                     # Prepare SEPTA Stations as Parquet.
 │   ├── main.py
 │   └── requirements.txt
+├── run_current_assessments_model/     # Train model and write predictions to BigQuery.
+│   ├── main.py
+│   ├── README.md
+│   └── requirements.txt
 ├── tax_year_bins/                     # Create tax-year assessment bins in BigQuery.
 │   ├── main.py
 │   ├── requirements.txt
@@ -324,10 +328,45 @@ gcloud functions deploy create-tax-year-assessment-bins `
     --memory=512MB `
     --no-allow-unauthenticated
 
+gcloud functions deploy generate-assessment-chart-config `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/generate_assessment_chart_config `
+    --entry-point=generate_assessment_chart_config `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+gcloud functions deploy create-current-assessment-bins `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/current_assessment_bins `
+    --entry-point=create_current_assessment_bins `
+    --trigger-http `
+    --timeout=1800s `
+    --memory=512MB `
+    --no-allow-unauthenticated
+
+gcloud functions deploy run-current-assessments-model `
+    --gen2 `
+    --runtime=python311 `
+    --region=us-east4 `
+    --source=tasks/run_current_assessments_model `
+    --entry-point=run_current_assessments_model `
+    --trigger-http `
+    --set-env-vars "PUBLIC_BUCKET=musa5090s26-team5-public" `
+    --timeout=1800s `
+    --memory=8GB `
+    --cpu=2 `
+    --no-allow-unauthenticated
+
 gcloud functions deploy generate-tax-year-chart-config `
     --gen2 `
     --runtime=python311 `
-    --region=$REGION `
+    --region=us-east4 `
     --source=tasks/generate_tax_year_chart_config `
     --entry-point=generate_tax_year_chart_config `
     --trigger-http `
@@ -338,7 +377,7 @@ gcloud functions deploy generate-tax-year-chart-config `
 gcloud functions deploy export-property-tile-info `
     --gen2 `
     --runtime=python311 `
-    --region=$REGION `
+    --region=us-east4 `
     --source=tasks/export_property_tile_info `
     --entry-point=export_property_tile_info `
     --trigger-http `
@@ -349,7 +388,7 @@ gcloud functions deploy export-property-tile-info `
 gcloud functions deploy generate-map-styling-metadata `
     --gen2 `
     --runtime=python311 `
-    --region=$REGION `
+    --region=us-east4 `
     --source=tasks/generate_map_styling_metadata `
     --entry-point=generate_map_styling_metadata `
     --trigger-http `
@@ -381,7 +420,10 @@ gcloud builds submit tasks/generate_property_map_tiles `
 # Deploy the Cloud Run job.
 gcloud run jobs deploy generate-property-map-tiles `
     --image=us-east4-docker.pkg.dev/musa5090s26-team5/cama/generate-property-map-tiles `
-    --region=us-east4
+    --region=us-east4 `
+    --task-timeout=3600s
+    --memory=4Gi `
+    --cpu=2
 ```
 
 ### Execution
@@ -434,6 +476,12 @@ gcloud functions call load-septa --region=us-east4
 gcloud functions call create-training-data --region=us-east4
 gcloud functions call create-tax-year-assessment-bins --region=us-east4
 gcloud functions call generate-tax-year-chart-config --region=us-east4
+
+# Model-dependent functions (run sequentially in this order).
+gcloud functions call run-current-assessments-model --region=us-east4
+gcloud functions call create-current-assessment-bins --region=us-east4
+gcloud functions call generate-assessment-chart-config --region=us-east4
+gcloud functions call generate-map-styling-metadata --region=us-east4
 gcloud functions call export-property-tile-info --region=us-east4
 
 # Generate property map tiles (Cloud Run job).
