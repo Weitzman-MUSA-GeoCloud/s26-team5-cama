@@ -29,22 +29,29 @@ The table is overwritten (`WRITE_TRUNCATE`) on each run, preserving a history of
 
 ## Features used
 
+All features match the columns produced by `tasks/create_training_data/create_training_data.sql`.
+
 | Feature | Label |
 |---|---|
 | `total_livable_area` | Living area (sqft) |
 | `total_area` | Total lot area (sqft) |
-| `number_of_bedrooms` | Bedrooms |
-| `number_of_bathrooms` | Bathrooms |
-| `number_stories` | Number of stories |
-| `garage_spaces` | Garage spaces |
-| `fireplaces` | Fireplaces |
+| `year_built` | Year built |
+| `property_age` | Property age (years) |
 | `exterior_condition` | Exterior condition |
 | `interior_condition` | Interior condition |
-| `quality_grade` | Quality grade |
-| `year_built` | Year built |
-| `zip_code` | ZIP code |
+| `condition_score` | Avg condition score |
+| `number_of_bedrooms` | Bedrooms |
+| `number_of_bathrooms` | Bathrooms |
 | `zoning` | Zoning |
-| `building_code_new` | Building code |
+| `assessed_value_2023` | Assessed value 2023 |
+| `assessed_value_2024` | Assessed value 2024 |
+| `assessed_value_2025` | Assessed value 2025 |
+| `pct_change_2023_to_2025` | % change 2023→2025 |
+| `lot_area_sqft` | Lot area (sqft) |
+| `lot_perimeter` | Lot perimeter (ft) |
+| `lot_shape_ratio` | Lot shape ratio |
+| `dist_to_septa_miles` | Distance to SEPTA (mi) |
+| `neighborhood` | Neighborhood |
 
 ## GCS output
 

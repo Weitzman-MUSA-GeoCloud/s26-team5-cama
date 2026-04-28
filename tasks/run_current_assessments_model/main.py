@@ -36,40 +36,51 @@ PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "musa5090s26-team5")
 PUBLIC_BUCKET = "musa5090s26-team5-public"
 FEATURE_IMPORTANCES_BLOB = "configs/model_feature_importances.json"
 
-# Features used for training and prediction
+# Features used for training and prediction — must match columns produced by
+# tasks/create_training_data/create_training_data.sql
 FEATURE_COLS = [
     "total_livable_area",
     "total_area",
-    "number_of_bedrooms",
-    "number_of_bathrooms",
-    "number_stories",
-    "garage_spaces",
-    "fireplaces",
+    "year_built",
+    "property_age",
     "exterior_condition",
     "interior_condition",
-    "quality_grade",
-    "year_built",
-    "zip_code",
+    "condition_score",
+    "number_of_bedrooms",
+    "number_of_bathrooms",
     "zoning",
-    "building_code_new",
+    "assessed_value_2023",
+    "assessed_value_2024",
+    "assessed_value_2025",
+    "pct_change_2023_to_2025",
+    "lot_area_sqft",
+    "lot_perimeter",
+    "lot_shape_ratio",
+    "dist_to_septa_miles",
+    "neighborhood",
 ]
 
 # Human-readable labels for the reviewer UI explainability panel
 FEATURE_LABELS = {
     "total_livable_area": "Living area (sqft)",
     "total_area": "Total lot area (sqft)",
-    "number_of_bedrooms": "Bedrooms",
-    "number_of_bathrooms": "Bathrooms",
-    "number_stories": "Number of stories",
-    "garage_spaces": "Garage spaces",
-    "fireplaces": "Fireplaces",
+    "year_built": "Year built",
+    "property_age": "Property age (years)",
     "exterior_condition": "Exterior condition",
     "interior_condition": "Interior condition",
-    "quality_grade": "Quality grade",
-    "year_built": "Year built",
-    "zip_code": "ZIP code",
+    "condition_score": "Avg condition score",
+    "number_of_bedrooms": "Bedrooms",
+    "number_of_bathrooms": "Bathrooms",
     "zoning": "Zoning",
-    "building_code_new": "Building code",
+    "assessed_value_2023": "Assessed value 2023",
+    "assessed_value_2024": "Assessed value 2024",
+    "assessed_value_2025": "Assessed value 2025",
+    "pct_change_2023_to_2025": "% change 2023→2025",
+    "lot_area_sqft": "Lot area (sqft)",
+    "lot_perimeter": "Lot perimeter (ft)",
+    "lot_shape_ratio": "Lot shape ratio",
+    "dist_to_septa_miles": "Distance to SEPTA (mi)",
+    "neighborhood": "Neighborhood",
 }
 
 
@@ -86,15 +97,106 @@ def load_training_data(client):
 
 
 def load_prediction_data(client):
-    """Pull all residential properties from core.opa_properties for prediction."""
+    """Pull all residential properties with the same features used for training."""
     print("Loading residential properties for prediction...")
-    cols = ", ".join(["parcel_number"] + FEATURE_COLS)
     query = f"""
-        SELECT {cols}
-        FROM `{PROJECT_ID}.core.opa_properties`
-        WHERE category_code = '1'
-            AND total_livable_area IS NOT NULL
-            AND total_livable_area > 0
+        WITH assessments_pivot AS (
+            SELECT
+                parcel_number,
+                MAX(CASE WHEN year = 2023.0 THEN market_value END) AS assessed_value_2023,
+                MAX(CASE WHEN year = 2024.0 THEN market_value END) AS assessed_value_2024,
+                MAX(CASE WHEN year = 2025.0 THEN market_value END) AS assessed_value_2025
+            FROM `{PROJECT_ID}.core.opa_assessments`
+            WHERE market_value IS NOT NULL AND market_value > 0
+            GROUP BY parcel_number
+        ),
+
+        pwd AS (
+            SELECT
+                brt_id,
+                shape__area AS lot_area_sqft,
+                shape__length AS lot_perimeter,
+                SAFE_DIVIDE(shape__area, shape__length * shape__length) AS lot_shape_ratio
+            FROM `{PROJECT_ID}.core.pwd_parcels`
+            WHERE brt_id IS NOT NULL AND shape__area > 0
+        ),
+
+        septa_dist AS (
+            SELECT
+                p.parcel_number,
+                MIN(ST_DISTANCE(
+                    p.geometry,
+                    ST_GEOGPOINT(
+                        SAFE_CAST(s.longitude AS FLOAT64),
+                        SAFE_CAST(s.latitude AS FLOAT64)
+                    )
+                )) / 1609.34 AS dist_to_septa_miles
+            FROM `{PROJECT_ID}.core.opa_properties` AS p
+            CROSS JOIN `{PROJECT_ID}.core.septa` AS s
+            WHERE
+                p.category_code = '1'
+                AND s.longitude IS NOT NULL
+                AND s.latitude IS NOT NULL
+                AND p.geometry IS NOT NULL
+            GROUP BY p.parcel_number
+        ),
+
+        prop_neighborhood AS (
+            SELECT
+                p.parcel_number,
+                n.name AS neighborhood
+            FROM `{PROJECT_ID}.core.opa_properties` AS p
+            INNER JOIN `{PROJECT_ID}.core.neighborhoods` AS n
+                ON ST_CONTAINS(ST_GEOGFROMWKB(n.geometry), p.geometry)
+            WHERE
+                p.category_code = '1'
+                AND p.geometry IS NOT NULL
+        )
+
+        SELECT
+            p.parcel_number,
+            SAFE_CAST(p.total_livable_area AS FLOAT64) AS total_livable_area,
+            SAFE_CAST(p.total_area AS FLOAT64) AS total_area,
+            SAFE_CAST(p.year_built AS FLOAT64) AS year_built,
+            EXTRACT(YEAR FROM CURRENT_DATE())
+                - SAFE_CAST(p.year_built AS INT64) AS property_age,
+            SAFE_CAST(p.exterior_condition AS FLOAT64) AS exterior_condition,
+            SAFE_CAST(p.interior_condition AS FLOAT64) AS interior_condition,
+            (
+                SAFE_CAST(p.exterior_condition AS FLOAT64)
+                + SAFE_CAST(p.interior_condition AS FLOAT64)
+            ) / 2.0 AS condition_score,
+            SAFE_CAST(p.number_of_bedrooms AS FLOAT64) AS number_of_bedrooms,
+            SAFE_CAST(p.number_of_bathrooms AS FLOAT64) AS number_of_bathrooms,
+            p.zoning,
+            a.assessed_value_2023,
+            a.assessed_value_2024,
+            a.assessed_value_2025,
+            ROUND(
+                SAFE_DIVIDE(
+                    a.assessed_value_2025 - a.assessed_value_2023,
+                    a.assessed_value_2023
+                ) * 100,
+                2
+            ) AS pct_change_2023_to_2025,
+            pwd.lot_area_sqft,
+            pwd.lot_perimeter,
+            pwd.lot_shape_ratio,
+            sd.dist_to_septa_miles,
+            pn.neighborhood
+        FROM `{PROJECT_ID}.core.opa_properties` AS p
+        LEFT JOIN assessments_pivot AS a
+            ON CAST(a.parcel_number AS STRING) = p.parcel_number
+        LEFT JOIN pwd
+            ON CAST(pwd.brt_id AS STRING) = p.parcel_number
+        LEFT JOIN septa_dist AS sd
+            ON sd.parcel_number = p.parcel_number
+        LEFT JOIN prop_neighborhood AS pn
+            ON pn.parcel_number = p.parcel_number
+        WHERE
+            p.category_code = '1'
+            AND p.total_livable_area IS NOT NULL
+            AND SAFE_CAST(p.total_livable_area AS FLOAT64) > 0
     """
     df = client.query(query).to_dataframe(create_bqstorage_client=False)
     print(f"Loaded {len(df):,} properties for prediction.")
