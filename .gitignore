@@ -15,3 +15,10 @@ tasks/.ruff_cache/
 
 # Sensitive files
 keys/
+ 
+# Jupyter and Anaconda artifacts 
+.ipynb_checkpoints/ 
+anaconda_projects/ 
+ 
+# Local script outputs 
+eda/eval_output/ 
