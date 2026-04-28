@@ -4,6 +4,19 @@ This folder contains the Cloud Functions and Workflows for the Philadelphia Comp
 
 ## Structure
 
+### EDA
+
+```
+eda/
+├── features.md                        # Notes on feature engineering.
+├── model_exploration_summary.md       # Summary of model exploration.
+├── opa_eda.ipynb                      # Exploratory data analysis notebook.
+├── opa_exploration_extended.ipynb     # Extended OPA exploration notebook.
+└── train_model.ipynb                  # Model training notebook.
+```
+
+### Tasks
+
 ```
 tasks/
 ├── config-cors/                       # CORS configuration for the public bucket.
@@ -99,6 +112,30 @@ tasks/
 │   └── data_pipeline.yaml             # Orchestration workflow.
 ├── deploy.ps1                         # PowerShell deployment script.
 └── README.md                          # This file.
+```
+
+### UI
+
+```
+ui/
+├── index.html                         # Main entry point for the front-end.
+├── configs/                           # Placeholder config files for the front-end.
+│   ├── dummy_current_assessment_bins.json
+│   └── dummy_tax_year_assessment_bins.json
+├── reviewer/                          # Assessment reviewer interface.
+│   ├── index.html
+│   └── styles.css
+└── widget/                            # Embeddable property lookup widget.
+    ├── index.html
+    └── styles.css
+```
+
+### Root
+
+```
+s26-team5-cama/
+├── GIT_WORKFLOW.md                    # Git branching and workflow guidelines.
+└── README.md                          # Project overview.
 ```
 
 ## Cloud Functions
