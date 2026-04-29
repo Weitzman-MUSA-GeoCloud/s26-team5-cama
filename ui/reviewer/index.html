@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.5.0/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <!-- jsPDF for client-side PDF generation. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- jsPDF-AutoTable plugin for table rendering in PDFs. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 <body>
@@ -21,12 +25,13 @@
 
       <!-- Summary stats, these numbers will be populated dynamically
            from assessment data once pipeline data is available. -->
-      <div class="summary">
+      <div class="summary" id="summary-stats">
         <p>
-          There were <strong>350,626</strong> properties that
-          increased in <a href="">assessed value since the last mass appraisal</a>.
-          Overall, each property assessment changed by an
-          <strong>increase of 23.6% on average</strong>.
+          There are <strong><span id="stat-total-properties">--</span></strong>
+          residential properties with
+          <a href="">predicted assessment values</a>.
+          The median predicted value falls in the
+          <strong><span id="stat-median-bin">--</span></strong> range.
         </p>
       </div>
 
@@ -51,29 +56,69 @@
 
     <!-- Main Map Area -->
     <main class="map-area">
-      <!-- Layer toggle panel. Controls which vector tile data layers are shown
-           on map. Checkbox values correspond to layer IDs added in issue #16. -->
+      <!-- Layer toggle panel. Radio buttons enforce single-selection since
+           overlapping choropleth fills would occlude each other. -->
       <div class="map-controls">
         <fieldset>
           <legend class="visually-hidden">Map Layers</legend>
           <label>
-            <input type="checkbox" name="layer" value="current-absolute" />
-            Current Absolute Assessment $ Values
+            <input type="radio" name="layer" value="pct-change" checked />
+            <span>
+              <span class="layer-label-main">% Change from Official</span>
+              <span class="layer-label-sub">Predicted vs. last official tax year</span>
+            </span>
           </label>
           <label>
-            <input type="checkbox" name="layer" value="tax-year-absolute" />
-            Tax Year 2023 Absolute Assessment $ Values
+            <input type="radio" name="layer" value="dollar-change" />
+            <span>
+              <span class="layer-label-main">$ Change from Official</span>
+              <span class="layer-label-sub">Dollar difference from official</span>
+            </span>
           </label>
           <label>
-            <input type="checkbox" name="layer" value="pct-change" checked />
-            Change (%) in Assessment Since Tax Year 2023
+            <input type="radio" name="layer" value="current-absolute" />
+            <span>
+              <span class="layer-label-main">Predicted Value</span>
+              <span class="layer-label-sub">ML model estimated market value</span>
+            </span>
           </label>
           <label>
-            <input type="checkbox" name="layer" value="dollar-change" />
-            Change ($) in Assessment Since Tax Year 2023
+            <input type="radio" name="layer" value="uncertainty" />
+            <span>
+              <span class="layer-label-main">Model Uncertainty</span>
+              <span class="layer-label-sub">Width of 80% prediction interval</span>
+            </span>
+          </label>
+          <label>
+            <input type="radio" name="layer" value="tax-year-absolute" />
+            <span>
+              <span class="layer-label-main" id="tax-year-label">Last Official Value</span>
+              <span class="layer-label-sub">Most recent OPA tax year value</span>
+            </span>
           </label>
         </fieldset>
+        <!-- Legend updates dynamically based on selected layer. -->
+        <div class="map-legend" id="map-legend"></div>
       </div>
+
+      <!-- Address geocoder search bar. Uses Philadelphia AIS API. -->
+      <div class="map-search" id="map-search">
+        <input
+          type="text"
+          id="search-address-input"
+          placeholder="Search by address"
+          autocomplete="off"
+          aria-label="Search for a property by address"
+        />
+        <button type="button" id="search-address-btn" aria-label="Search">
+          &#x1F50D;
+        </button>
+      </div>
+
+      <!-- Export button. Generates a PDF of properties visible in the current map viewport. -->
+      <button type="button" class="map-export-btn" id="export-pdf-btn" title="Export visible properties to PDF">
+        &#x1F4C4; Export PDF
+      </button>
 
       <!-- Map container. Sized to fill remaining viewport via CSS.
            MapLibre GL JS mounts canvas into this element. -->
@@ -82,6 +127,7 @@
       <!-- Property popup shown on click of a property in vector tile layer.
            Populated dynamically by `populatePropertyPopup` below. -->
       <div class="property-popup" id="property-popup" hidden>
+        <button class="popup-close" type="button" aria-label="Close property popup">&times;</button>
         <h3 class="popup-address" id="popup-address">&mdash;</h3>
         <table class="popup-details">
           <tr>
@@ -89,7 +135,7 @@
             <td class="popup-value" id="popup-predicted">&mdash;</td>
           </tr>
           <tr>
-            <td class="popup-label">Tax year:</td>
+            <td class="popup-label">Tax Year:</td>
             <td class="popup-value" id="popup-tax-year">&mdash;</td>
           </tr>
           <tr>
@@ -119,13 +165,18 @@
         <!-- Explainability of top features driving model, with this
              property's value alongside each one. -->
         <div class="drivers-section">
-          <h4 class="drivers-title">Why this prediction?</h4>
+          <h4 class="drivers-title">Top Model Features</h4>
           <ul class="drivers-list" id="popup-drivers"></ul>
           <p class="drivers-footnote">
             Importance reflects the model's overall reliance on each
             feature, not its effect on this property alone.
           </p>
         </div>
+
+        <!-- Link to the property widget for full valuation history. -->
+        <a class="popup-widget-link" id="popup-widget-link" href="#" target="_blank">
+          View full valuation history &rarr;
+        </a>
       </div>
     </main>
   </div>
@@ -164,11 +215,246 @@
         ],
       },
       center: [-75.1652, 39.9526], // Philadelphia city center [longitude, latitude].
-      zoom: 11, // City-wide view. Shows all of Philadelphia at load.
+      zoom: 14, // Parcel-level view. Individual properties visible at load.
     });
 
     // Add zoom (+/−) and compass rotation controls to the top-left corner.
     map.addControl(new maplibregl.NavigationControl(), "top-left");
+  </script>
+
+  <script>
+    // ADDRESS SEARCH GEOCODER
+    // Uses the Philadelphia AIS geocoder API to search by address,
+    // fly the map to the result, and optionally open the property popup.
+    const AIS_BASE_URL = "https://api.phila.gov/ais/v1/search/";
+
+    // Reference to the search input and button elements.
+    const searchInput = document.getElementById("search-address-input");
+    const searchBtn = document.getElementById("search-address-btn");
+
+    // Perform geocode lookup and fly map to result coordinates.
+    function geocodeAndFly(address) {
+      if (!address || address.trim().length === 0) return;
+
+      const url = AIS_BASE_URL + encodeURIComponent(address.trim());
+
+      fetch(url)
+        .then(function (res) {
+          return res.ok ? res.json() : Promise.reject(res.status);
+        })
+        .then(function (data) {
+          // Extract the first matching feature from the AIS response.
+          const features = data.features;
+          if (!features || features.length === 0) {
+            alert("No results found for that address.");
+            return;
+          }
+
+          const firstMatch = features[0];
+          const coords = firstMatch.geometry.coordinates;
+          const lng = coords[0];
+          const lat = coords[1];
+
+          // Fly the map to the geocoded location at parcel-level zoom.
+          map.flyTo({
+            center: [lng, lat],
+            zoom: 17,
+            essential: true,
+          });
+
+          // Update the search input with the canonical address returned by AIS.
+          const canonical = firstMatch.properties.street_address;
+          if (canonical) {
+            searchInput.value = canonical;
+          }
+        })
+        .catch(function (err) {
+console.error("Geocoder error:", err);
+          alert("Address lookup failed. Check the address and try again.");
+        });
+    }
+
+    // Trigger geocode on button click.
+    searchBtn.addEventListener("click", function () {
+      geocodeAndFly(searchInput.value);
+    });
+
+    // Trigger geocode on Enter key press inside the input.
+    searchInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        geocodeAndFly(searchInput.value);
+      }
+    });
+  </script>
+
+  <script>
+    // VIEWPORT PDF EXPORT
+    // Queries all property features currently rendered in the map viewport
+    // and generates a downloadable PDF report using jsPDF + AutoTable.
+
+    const exportBtn = document.getElementById("export-pdf-btn");
+
+    // Format a number as USD string for the PDF table.
+    function pdfFmtUsd(n) {
+      if (n == null || isNaN(n)) return "--";
+      return "$" + Math.round(n).toLocaleString();
+    }
+
+    // Format a decimal as a percentage string for the PDF table.
+    function pdfFmtPct(n) {
+      if (n == null || isNaN(n)) return "--";
+      return (n * 100).toFixed(1) + "%";
+    }
+
+    // Compute margin of error as a percentage of the predicted value.
+    function pdfMoePct(lower, upper, predicted) {
+      if (lower == null || upper == null || predicted == null || predicted === 0) return "--";
+      var halfWidth = (upper - lower) / 2;
+      return (halfWidth / predicted * 100).toFixed(0) + "%";
+    }
+
+    exportBtn.addEventListener("click", function () {
+      // Verify jsPDF library loaded successfully from CDN.
+      if (typeof jspdf === "undefined" || typeof jspdf.jsPDF === "undefined") {
+        alert("PDF library failed to load. Check network connection and try refreshing the page.");
+        return;
+      }
+
+      // Disable button during generation to prevent double-clicks.
+      exportBtn.disabled = true;
+      exportBtn.textContent = "Generating...";
+
+      // Allow the UI to update before the synchronous PDF work.
+      setTimeout(function () {
+        try {
+          // Verify the clickable tile layer exists on the map.
+          if (!map.getLayer("property-tiles-clickable")) {
+            alert("Property tile layer has not loaded yet. Wait for tiles to appear on the map, then try again.");
+            exportBtn.disabled = false;
+            exportBtn.textContent = "\uD83D\uDCC4 Export PDF";
+            return;
+          }
+
+          // Query all property features visible in the current map viewport.
+          var features = map.queryRenderedFeatures(
+            [
+              [0, 0],
+              [map.getCanvas().width, map.getCanvas().height]
+            ],
+            { layers: ["property-tiles-clickable"] }
+          );
+
+          if (!features || features.length === 0) {
+            alert("No properties are visible in the current map view. Zoom in to see property tiles (zoom 10+).");
+            exportBtn.disabled = false;
+            exportBtn.textContent = "\uD83D\uDCC4 Export PDF";
+            return;
+          }
+
+          // De-duplicate features by property_id since tiles can repeat features across tile boundaries.
+          var seen = {};
+          var unique = [];
+          for (var i = 0; i < features.length; i++) {
+            var props = features[i].properties;
+            var pid = props.property_id;
+            if (pid && !seen[pid]) {
+              seen[pid] = true;
+              unique.push(props);
+            }
+          }
+
+          // Sort by percent change descending (largest increases first).
+          unique.sort(function (a, b) {
+            var aVal = a.pct_change != null ? a.pct_change : -999;
+            var bVal = b.pct_change != null ? b.pct_change : -999;
+            return bVal - aVal;
+          });
+
+          // Build the table rows for the PDF.
+          var tableBody = unique.map(function (p) {
+            return [
+              p.property_id || "--",
+              p.address || "--",
+              p.neighborhood || "--",
+              pdfFmtUsd(p.current_assessed_value),
+              pdfFmtUsd(p.tax_year_assessed_value),
+              pdfFmtPct(p.pct_change),
+              pdfMoePct(p.current_assessed_value_lower, p.current_assessed_value_upper, p.current_assessed_value),
+            ];
+          });
+
+          // Create PDF in landscape orientation for wide tables.
+          // Access jsPDF constructor. UMD build exposes it under the jspdf namespace.
+          var JsPDFConstructor = jspdf.jsPDF || jspdf.default || jspdf;
+          var doc = new JsPDFConstructor({ orientation: "landscape", unit: "mm", format: "letter" });
+
+          // Title block.
+          doc.setFontSize(14);
+          doc.setFont("helvetica", "bold");
+          doc.text("Mass Appraisal Review - Viewport Export", 14, 16);
+
+          // Metadata line.
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          var now = new Date();
+          var dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString();
+          doc.text("Generated: " + dateStr + "  |  Properties: " + unique.length.toLocaleString(), 14, 22);
+
+          // Render the data table using AutoTable plugin.
+          doc.autoTable({
+            startY: 28,
+            head: [["OPA ID", "Address", "Neighborhood", "Predicted", "Official", "% Change", "MOE %"]],
+            body: tableBody,
+            styles: {
+              fontSize: 7,
+              cellPadding: 2,
+            },
+            headStyles: {
+              fillColor: [44, 57, 104],
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+              fontSize: 7.5,
+            },
+            alternateRowStyles: {
+              fillColor: [244, 243, 232],
+            },
+            columnStyles: {
+              0: { cellWidth: 22 },
+              3: { halign: "right" },
+              4: { halign: "right" },
+              5: { halign: "right" },
+              6: { halign: "right" },
+            },
+            margin: { left: 14, right: 14 },
+          });
+
+          // Footer with disclaimer.
+          var pageCount = doc.getNumberOfPages();
+          for (var pg = 1; pg <= pageCount; pg++) {
+            doc.setPage(pg);
+            doc.setFontSize(7);
+            doc.setTextColor(150);
+            doc.text(
+              "Page " + pg + " of " + pageCount + "  |  Predicted values are ML model estimates (GradientBoostingRegressor). MOE = half-width of 80% prediction interval as % of predicted value.",
+              14,
+              doc.internal.pageSize.getHeight() - 8
+            );
+          }
+
+          // Trigger browser download.
+          doc.save("assessment_review_export_" + now.toISOString().slice(0, 10) + ".pdf");
+
+        } catch (err) {
+console.error("PDF export failed:", err, err.stack || "");
+          alert("PDF export failed. See console for details.");
+        }
+
+        // Re-enable the export button.
+        exportBtn.disabled = false;
+        exportBtn.textContent = "\uD83D\uDCC4 Export PDF";
+      }, 50);
+    });
   </script>
 
   <script>
@@ -181,7 +467,7 @@
     function formatDollar(value) {
       if (value >= 1_000_000) return "$" + (value / 1_000_000).toFixed(1) + "M";
       if (value >= 1_000) return "$" + (value / 1_000).toFixed(0) + "K";
-      return "$" + value;
+      return "$" + Math.round(value).toLocaleString();
     }
 
     fetch(TAX_YEAR_BINS_URL)
@@ -317,6 +603,46 @@
         // Render chart for the most recent year on initial load.
         const latestYear = years[0];
         renderCurrentAssessmentChart(allBins.filter((b) => b.tax_year === latestYear));
+
+        // SUMMARY STATS FROM CHART BIN DATA
+        // Compute total property count and median bin from the most recent year's bins.
+        var latestBins = allBins.filter(function (b) { return b.tax_year === latestYear; });
+
+        // Sum all property counts across bins for the total.
+        var totalProperties = 0;
+        for (var i = 0; i < latestBins.length; i++) {
+          totalProperties += latestBins[i].property_count;
+        }
+
+        // Find the bin containing the median property.
+        // Walk through bins in order, accumulating counts, until passing the midpoint.
+        var medianTarget = totalProperties / 2;
+        var cumulative = 0;
+        var medianBinLabel = "--";
+        for (var j = 0; j < latestBins.length; j++) {
+          cumulative += latestBins[j].property_count;
+          if (cumulative >= medianTarget) {
+            // Format the bin range for display.
+            var lb = latestBins[j].lower_bound;
+            var ub = latestBins[j].upper_bound;
+            if (ub >= 999999999) {
+              medianBinLabel = formatDollar(lb) + "+";
+            } else {
+              medianBinLabel = formatDollar(lb) + " \u2013 " + formatDollar(ub);
+            }
+            break;
+          }
+        }
+
+        // Populate the summary stat spans.
+        var totalEl = document.getElementById("stat-total-properties");
+        if (totalEl) {
+          totalEl.textContent = totalProperties.toLocaleString();
+        }
+        var medianEl = document.getElementById("stat-median-bin");
+        if (medianEl) {
+          medianEl.textContent = medianBinLabel;
+        }
 
         // Re-render whenever the user selects a different year.
         yearSelect.addEventListener("change", () => {
@@ -459,6 +785,7 @@
       // in future, but would require shipping model to browser.
       // Global importances + this property's actual feature values give
       // reviewers a useful surface-level explanation.
+      // NOTE: These are global feature importances, not per-property SHAP values.
       const driversEl = document.getElementById("popup-drivers");
       driversEl.innerHTML = "";
       const top = featureImportances.slice(0, TOP_DRIVERS_COUNT);
@@ -483,6 +810,17 @@
       }
 
       popup.hidden = false;
+
+      // WIDGET DEEP LINK
+      // Set the widget deep link href using the clicked property's OPA ID.
+      const widgetLink = document.getElementById("popup-widget-link");
+      if (props.property_id) {
+        widgetLink.href = "../widget/?opa=" + encodeURIComponent(props.property_id);
+        widgetLink.hidden = false;
+      } else {
+        // Hide link if property_id is missing from tile properties.
+        widgetLink.hidden = true;
+      }
     }
 
     // Load global feature importances once. Failures are non-fatal as
@@ -496,11 +834,138 @@
         console.warn("Feature importances unavailable:", err);
       });
 
-    // Hook up property tile layer + click handler once map is
-    // ready. Add a transparent fill purely so clicks register if no
-    // styled layer exists yet. If source/layer are already added
-    // elsewhere, this is safe to skip.
+    // Hook up property tile layers, legend, and click handler.
+
+    const MAP_STYLING_URL =
+      "https://storage.googleapis.com/musa5090s26-team5-public/configs/map_styling_metadata.json";
+
+    // Color ramps.
+    // Sequential blue for absolute dollar values.
+    const COLORS_ABSOLUTE = ["#eff3ff", "#bdd7e7", "#6baed6", "#3182bd", "#08519c"];
+    // Diverging green→yellow→red for change layers.
+    const COLORS_CHANGE = ["#1a9850", "#91cf60", "#ffffbf", "#fc8d59", "#d73027"];
+    // Sequential purple for model uncertainty (narrow → wide interval).
+    const COLORS_UNCERTAINTY = ["#f2f0f7", "#cbc9e2", "#9e9ac8", "#756bb1", "#54278f"];
+
+    // Build a MapLibre "step" expression from quantile breakpoints.
+    // breakpoints = [min, Q1, Q2, Q3, max] from APPROX_QUANTILES(x, 4).
+    function buildStepExpr(property, breakpoints, colors) {
+      const [, q1, q2, q3] = breakpoints;
+      return [
+        "step",
+        ["coalesce", ["get", property], 0],
+        colors[0],
+        q1, colors[1],
+        q2, colors[2],
+        q3, colors[3],
+      ];
+    }
+
+    // Diverging step for pct_change (stored as decimal, e.g. 0.25 = 25%).
+    function buildPctChangeExpr() {
+      return [
+        "step",
+        ["coalesce", ["get", "pct_change"], 0],
+        COLORS_CHANGE[0],
+        -0.20, COLORS_CHANGE[1],
+        -0.05, COLORS_CHANGE[2],
+        0.05,  COLORS_CHANGE[3],
+        0.20,  COLORS_CHANGE[4],
+      ];
+    }
+
+    // Dollar change = predicted − last official.
+    function buildDollarChangeExpr() {
+      const diff = [
+        "-",
+        ["coalesce", ["get", "current_assessed_value"], 0],
+        ["coalesce", ["get", "tax_year_assessed_value"], 0],
+      ];
+      return [
+        "step",
+        diff,
+        COLORS_CHANGE[0],
+        -50000, COLORS_CHANGE[1],
+        -5000,  COLORS_CHANGE[2],
+        5000,   COLORS_CHANGE[3],
+        50000,  COLORS_CHANGE[4],
+      ];
+    }
+
+    // Model uncertainty = width of 80% prediction interval.
+    function buildUncertaintyExpr() {
+      const width = [
+        "-",
+        ["coalesce", ["get", "current_assessed_value_upper"], 0],
+        ["coalesce", ["get", "current_assessed_value_lower"], 0],
+      ];
+      return [
+        "step",
+        width,
+        COLORS_UNCERTAINTY[0],
+        25000,  COLORS_UNCERTAINTY[1],
+        75000,  COLORS_UNCERTAINTY[2],
+        150000, COLORS_UNCERTAINTY[3],
+        300000, COLORS_UNCERTAINTY[4],
+      ];
+    }
+
+    // Layer definitions. "value" matches radio button value attributes.
+    const LAYER_DEFS = [
+      { value: "pct-change",        id: "layer-pct-change" },
+      { value: "dollar-change",     id: "layer-dollar-change" },
+      { value: "current-absolute",  id: "layer-current-absolute" },
+      { value: "uncertainty",       id: "layer-uncertainty" },
+      { value: "tax-year-absolute", id: "layer-tax-year-absolute" },
+    ];
+
+    // Legend configuration per layer. Each has a gradient (CSS) and endpoint labels.
+    const LEGEND_CONFIG = {
+      "pct-change": {
+        title: "% Change from Last Official Assessment",
+        colors: COLORS_CHANGE,
+        labels: ["≤ −20%", "−5%", "0%", "+5%", "≥ +20%"],
+      },
+      "dollar-change": {
+        title: "$ Change from Last Official Assessment",
+        colors: COLORS_CHANGE,
+        labels: ["≤ −$50K", "−$5K", "$0", "+$5K", "≥ +$50K"],
+      },
+      "current-absolute": {
+        title: "Predicted Assessment Value",
+        colors: COLORS_ABSOLUTE,
+        labels: null, // filled dynamically from breakpoints
+      },
+      "uncertainty": {
+        title: "Model Uncertainty (80% Interval Width)",
+        colors: COLORS_UNCERTAINTY,
+        labels: ["< $25K", "$25K", "$75K", "$150K", "≥ $300K"],
+      },
+      "tax-year-absolute": {
+        title: "Last Official Assessment Value",
+        colors: COLORS_ABSOLUTE,
+        labels: null, // filled dynamically from breakpoints
+      },
+    };
+
+    // Render the legend into #map-legend for the given layer value.
+    function renderLegend(layerValue) {
+      const el = document.getElementById("map-legend");
+      const cfg = LEGEND_CONFIG[layerValue];
+      if (!cfg) { el.innerHTML = ""; return; }
+
+      const labels = cfg.labels || [];
+      const grad = cfg.colors.join(", ");
+      el.innerHTML =
+        '<div class="map-legend-title">' + cfg.title + "</div>" +
+        '<div class="map-legend-bar" style="background: linear-gradient(to right, ' + grad + ')"></div>' +
+        '<div class="map-legend-labels">' +
+          labels.map((l) => "<span>" + l + "</span>").join("") +
+        "</div>";
+    }
+
     map.on("load", () => {
+      // Add vector tile source once.
       if (!map.getSource("property-tiles")) {
         map.addSource("property-tiles", {
           type: "vector",
@@ -509,19 +974,97 @@
           maxzoom: 16,
         });
       }
-      if (!map.getLayer("property-tiles-clickable")) {
-        map.addLayer({
-          id: "property-tiles-clickable",
-          type: "fill",
-          source: "property-tiles",
-          "source-layer": PROPERTY_TILE_LAYER,
-          paint: {
-            "fill-color": "#000000",
-            "fill-opacity": 0,
-          },
-        });
-      }
 
+      // Fetch styling metadata, build layers, wire up radio buttons.
+      fetch(MAP_STYLING_URL)
+        .then((res) => res.ok ? res.json() : Promise.reject(res.status))
+        .then((meta) => {
+          const predBP = meta.predicted_value?.breakpoints || [0, 100000, 200000, 400000, 1000000];
+          const taxBP  = meta.market_value?.breakpoints    || [0, 100000, 200000, 400000, 1000000];
+
+          // Fill in dynamic legend labels from breakpoints.
+          LEGEND_CONFIG["current-absolute"].labels = predBP.map(formatDollar);
+          LEGEND_CONFIG["tax-year-absolute"].labels = taxBP.map(formatDollar);
+
+          // Update "Last Official Value" label with the latest tax year
+          // from the tile metadata if available.
+          if (meta.market_value?.tax_year) {
+            const el = document.getElementById("tax-year-label");
+            if (el) el.textContent = "Last Official Value (" + meta.market_value.tax_year + ")";
+          }
+
+          // Build fill-color expressions per layer.
+          const fillColors = {
+            "pct-change":        buildPctChangeExpr(),
+            "dollar-change":     buildDollarChangeExpr(),
+            "current-absolute":  buildStepExpr("current_assessed_value", predBP, COLORS_ABSOLUTE),
+            "uncertainty":       buildUncertaintyExpr(),
+            "tax-year-absolute": buildStepExpr("tax_year_assessed_value", taxBP, COLORS_ABSOLUTE),
+          };
+
+          // Determine which radio is currently selected.
+          const selected = document.querySelector('input[name="layer"]:checked')?.value || "pct-change";
+
+          // Add all choropleth layers; only the selected one is visible.
+          for (const def of LAYER_DEFS) {
+            map.addLayer({
+              id: def.id,
+              type: "fill",
+              source: "property-tiles",
+              "source-layer": PROPERTY_TILE_LAYER,
+              paint: {
+                "fill-color": fillColors[def.value],
+                "fill-opacity": 0.75,
+                "fill-outline-color": "rgba(0,0,0,0.15)",
+              },
+              layout: {
+                visibility: def.value === selected ? "visible" : "none",
+              },
+            });
+          }
+
+          // Invisible clickable layer on top for popups.
+          map.addLayer({
+            id: "property-tiles-clickable",
+            type: "fill",
+            source: "property-tiles",
+            "source-layer": PROPERTY_TILE_LAYER,
+            paint: { "fill-color": "#000000", "fill-opacity": 0 },
+          });
+
+          // Render initial legend.
+          renderLegend(selected);
+
+          // Wire up radio buttons.
+          document.querySelectorAll('input[name="layer"]').forEach((radio) => {
+            radio.addEventListener("change", () => {
+              const chosen = radio.value;
+              for (const def of LAYER_DEFS) {
+                map.setLayoutProperty(
+                  def.id,
+                  "visibility",
+                  def.value === chosen ? "visible" : "none"
+                );
+              }
+              renderLegend(chosen);
+            });
+          });
+        })
+        .catch((err) => {
+          console.error("Failed to load map styling metadata:", err);
+          // Fallback: still add invisible clickable layer for popups.
+          if (!map.getLayer("property-tiles-clickable")) {
+            map.addLayer({
+              id: "property-tiles-clickable",
+              type: "fill",
+              source: "property-tiles",
+              "source-layer": PROPERTY_TILE_LAYER,
+              paint: { "fill-color": "#000000", "fill-opacity": 0 },
+            });
+          }
+        });
+
+      // Click handler for property popup.
       map.on("click", "property-tiles-clickable", (e) => {
         if (!e.features || e.features.length === 0) return;
         populatePropertyPopup(e.features[0].properties || {});
@@ -533,6 +1076,11 @@
       map.on("mouseleave", "property-tiles-clickable", () => {
         map.getCanvas().style.cursor = "";
       });
+    });
+
+    // Dismiss property popup when close button is clicked.
+    document.querySelector(".popup-close").addEventListener("click", () => {
+      document.getElementById("property-popup").hidden = true;
     });
   </script>
 </body>

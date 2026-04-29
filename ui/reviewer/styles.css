@@ -176,10 +176,141 @@ strong, b {
   margin-bottom: 0; /* Remove trailing gap after last toggle. */
 }
 
-.map-controls input[type="checkbox"] {
+.map-controls input[type="checkbox"],
+.map-controls input[type="radio"] {
   width: 14px;
   height: 14px;
   cursor: pointer;
+}
+
+/* Radio button label layout. Main label + descriptive subtitle. */
+.layer-label-main {
+  display: block;
+  font-size: 0.82rem;
+}
+
+.layer-label-sub {
+  display: block;
+  font-size: 0.68rem;
+  color: #888;
+  margin-top: 1px;
+  line-height: 1.2;
+}
+
+/* Map Legend
+   Color-key shown below layer radio buttons.
+   Renders a horizontal gradient bar with labeled endpoints. */
+
+.map-legend {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.map-legend-title {
+  font-size: 0.7rem;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.map-legend-bar {
+  height: 10px;
+  border-radius: 3px;
+  margin-bottom: 3px;
+}
+
+.map-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 2px;
+  font-size: 0.65rem;
+  color: #888;
+}
+
+.map-legend-labels span {
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.6rem;
+}
+
+/* Address Search Bar
+   Floating search input over map, top-left below nav controls.
+   Positioned to avoid overlap with MapLibre zoom controls. */
+
+.map-search {
+  position: absolute;
+  top: 12px;
+  left: 56px;
+  z-index: 1000;
+  display: flex;
+  gap: 0;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.map-search input {
+  width: 240px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid #ccc;
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  outline: none;
+  background: #fff;
+}
+
+.map-search input:focus {
+  border-color: #2C3968;
+}
+
+.map-search button {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background: #2C3968;
+  color: #fff;
+  border: 1px solid #2C3968;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.map-search button:hover {
+  background: #1e2a4a;
+}
+
+/* PDF Export Button
+   Floating button over map, positioned top-left below the search bar.
+   Triggers client-side PDF generation of viewport properties. */
+
+.map-export-btn {
+  position: absolute;
+  top: 52px;
+  left: 56px;
+  z-index: 1000;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  background: #fff;
+  color: #2C3968;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+  transition: background 0.15s, color 0.15s;
+}
+
+.map-export-btn:hover {
+  background: #2C3968;
+  color: #fff;
+}
+
+.map-export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Property Popup
@@ -199,6 +330,24 @@ strong, b {
   max-width: 280px;
   font-size: 0.85rem;
   box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+}
+
+/* Close button for property popup. Positioned top-right corner. */
+.popup-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #888;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.popup-close:hover {
+  color: #232323;
 }
 
 .popup-address {
@@ -376,6 +525,17 @@ strong, b {
   line-height: 1.3;
 }
 
+/* Deep link from popup to widget valuation history page. */
+.popup-widget-link {
+  display: block;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* Utility
    Visually hides element while keeping accessible to screen readers.
    Used on <legend> inside layer toggle fieldset. */
@@ -441,6 +601,23 @@ strong, b {
     bottom: 16px;
     max-width: 85vw;
   }
+
+  .map-search {
+    left: 12px;
+    top: auto;
+    bottom: 12px;
+  }
+
+  .map-search input {
+    width: 180px;
+    font-size: 0.8rem;
+  }
+
+  .map-export-btn {
+    top: auto;
+    bottom: 52px;
+    left: 12px;
+  }
 }
 
 /* Small Phone (≤ 480px)
@@ -493,5 +670,9 @@ strong, b {
     max-width: 92vw;
     font-size: 0.8rem;
     padding: 10px 12px;
+  }
+
+  .map-search input {
+    width: 150px;
   }
 }

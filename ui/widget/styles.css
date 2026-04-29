@@ -160,6 +160,14 @@ strong, b {
   padding: 0 20px;
 }
 
+/* Empty state message shown in table before lookup is performed. */
+.table-empty-state {
+  text-align: center;
+  color: #999;
+  font-size: 0.85rem;
+  padding: 24px 12px;
+}
+
 /* Data Table
    Tabular history of assessed values by year, populated dynamically from BigQuery.
    overflow-x: Auto on wrapper lets table scroll horizontally on narrow screens
