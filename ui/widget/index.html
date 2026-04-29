@@ -80,68 +80,216 @@
             </tr>
           </thead>
           <tbody id="valuation-table-body">
-            <!-- Example rows (will be populated dynamically). -->
             <tr>
-              <td>2023</td>
-              <td>$152,000</td>
-              <td>$30,400</td>
-              <td>$121,600</td>
-              <td>$0</td>
-              <td>$0</td>
-            </tr>
-            <tr>
-              <td>2022</td>
-              <td>$46,000</td>
-              <td>$6,900</td>
-              <td>$39,100</td>
-              <td>$0</td>
-              <td>$0</td>
-            </tr>
-            <tr>
-              <td>2021</td>
-              <td>$46,000</td>
-              <td>$6,900</td>
-              <td>$39,100</td>
-              <td>$0</td>
-              <td>$0</td>
-            </tr>
-            <tr>
-              <td>2020</td>
-              <td>$46,000</td>
-              <td>$6,900</td>
-              <td>$39,100</td>
-              <td>$0</td>
-              <td>$0</td>
-            </tr>
-            <tr>
-              <td>2019</td>
-              <td>$74,800</td>
-              <td>$11,200</td>
-              <td>$63,600</td>
-              <td>$0</td>
-              <td>$0</td>
-            </tr>
-            <tr>
-              <td>2018</td>
-              <td>$57,600</td>
-              <td>$8,640</td>
-              <td>$48,960</td>
-              <td>$0</td>
-              <td>$0</td>
-            </tr>
-            <tr>
-              <td>2017</td>
-              <td>$57,600</td>
-              <td>$8,640</td>
-              <td>$48,960</td>
-              <td>$0</td>
-              <td>$0</td>
+              <td colspan="6" class="table-empty-state">Enter an OPA account number above to view assessment history.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
   </div>
+
+  <script>
+    // WIDGET DATA FETCH AND RENDER LOGIC
+    // Fetches assessment history from the Philadelphia Carto SQL API
+    // and populates the chart and table for the looked-up property.
+
+    // Philadelphia Carto SQL API base URL. Public, no API key required.
+    var CARTO_API_BASE = "https://phl.carto.com/api/v2/sql";
+
+    // Reference DOM elements used by the fetch and render functions.
+    var opaInput = document.getElementById("opa-id-input");
+    var lookupBtn = document.getElementById("lookup-btn");
+    var tableBody = document.getElementById("valuation-table-body");
+    var recordCount = document.getElementById("record-count");
+    var chartContainer = document.getElementById("valuation-chart");
+
+    // Format a number as USD with commas.
+    function widgetFmtUsd(value) {
+      if (value == null || isNaN(value)) return "$0";
+      return "$" + Math.round(value).toLocaleString();
+    }
+
+    // Build the SQL query for a given OPA parcel number.
+    function buildAssessmentQuery(parcelNumber) {
+      // Sanitize the input to digits only to prevent SQL injection.
+      var sanitized = parcelNumber.replace(/[^0-9]/g, "");
+      return "SELECT year, market_value, taxable_land, taxable_building, exempt_land, exempt_building " +
+             "FROM assessments " +
+             "WHERE parcel_number = '" + sanitized + "' " +
+             "ORDER BY year DESC";
+    }
+
+    // Clear the table and show the empty state message.
+    function showTableEmpty(message) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="table-empty-state">' + message + "</td></tr>";
+      recordCount.textContent = "(0)";
+    }
+
+    // Populate the valuation table with fetched rows.
+    function renderTable(rows) {
+      tableBody.innerHTML = "";
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" + (r.year != null ? Math.round(r.year) : "--") + "</td>" +
+          "<td>" + widgetFmtUsd(r.market_value) + "</td>" +
+          "<td>" + widgetFmtUsd(r.taxable_land) + "</td>" +
+          "<td>" + widgetFmtUsd(r.taxable_building) + "</td>" +
+          "<td>" + widgetFmtUsd(r.exempt_land) + "</td>" +
+          "<td>" + widgetFmtUsd(r.exempt_building) + "</td>";
+        tableBody.appendChild(tr);
+      }
+      recordCount.textContent = "(" + rows.length + ")";
+    }
+
+    // Render a simple bar chart of market value over time.
+    // Uses inline SVG so no charting library dependency is needed.
+    function renderChart(rows) {
+      // Sort ascending by year for left-to-right chronological order.
+      var sorted = rows.slice().sort(function (a, b) {
+        return (a.year || 0) - (b.year || 0);
+      });
+
+      // Filter to rows with valid market_value.
+      var valid = sorted.filter(function (r) {
+        return r.market_value != null && r.market_value > 0;
+      });
+
+      if (valid.length === 0) {
+        chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">No market value data available for this property.</p></div>';
+        return;
+      }
+
+      // Compute chart dimensions and scale.
+      var chartWidth = chartContainer.clientWidth || 760;
+      var chartHeight = 200;
+      var padding = { top: 20, right: 20, bottom: 40, left: 70 };
+      var plotWidth = chartWidth - padding.left - padding.right;
+      var plotHeight = chartHeight - padding.top - padding.bottom;
+
+      var maxVal = 0;
+      for (var i = 0; i < valid.length; i++) {
+        if (valid[i].market_value > maxVal) maxVal = valid[i].market_value;
+      }
+      // Add 10% headroom above tallest bar.
+      maxVal = maxVal * 1.1;
+
+      var barGap = 4;
+      var barWidth = Math.max(8, (plotWidth - barGap * (valid.length - 1)) / valid.length);
+      // Cap bar width for readability when few years are present.
+      if (barWidth > 60) barWidth = 60;
+
+      // Recalculate total width used by bars for centering.
+      var totalBarsWidth = valid.length * barWidth + (valid.length - 1) * barGap;
+      var offsetX = padding.left + (plotWidth - totalBarsWidth) / 2;
+
+      // Build SVG string.
+      var svg = '<svg width="' + chartWidth + '" height="' + chartHeight + '" xmlns="http://www.w3.org/2000/svg" style="font-family: Open Sans, Helvetica, Arial, sans-serif;">';
+
+      // Y-axis gridlines and labels (4 ticks).
+      var tickCount = 4;
+      for (var t = 0; t <= tickCount; t++) {
+        var tickVal = (maxVal / tickCount) * t;
+        var tickY = padding.top + plotHeight - (tickVal / maxVal) * plotHeight;
+        // Gridline.
+        svg += '<line x1="' + padding.left + '" y1="' + tickY + '" x2="' + (chartWidth - padding.right) + '" y2="' + tickY + '" stroke="#e0e0e0" stroke-width="1"/>';
+        // Label.
+        var label = tickVal >= 1000000 ? "$" + (tickVal / 1000000).toFixed(1) + "M" : tickVal >= 1000 ? "$" + Math.round(tickVal / 1000) + "K" : "$" + Math.round(tickVal);
+        svg += '<text x="' + (padding.left - 6) + '" y="' + (tickY + 4) + '" text-anchor="end" font-size="10" fill="#888">' + label + "</text>";
+      }
+
+      // Bars and x-axis labels.
+      for (var b = 0; b < valid.length; b++) {
+        var barX = offsetX + b * (barWidth + barGap);
+        var barH = (valid[b].market_value / maxVal) * plotHeight;
+        var barY = padding.top + plotHeight - barH;
+
+        // Bar rectangle.
+        svg += '<rect x="' + barX + '" y="' + barY + '" width="' + barWidth + '" height="' + barH + '" fill="#2C3968" rx="2"/>';
+
+        // Year label below bar.
+        var yearLabel = valid[b].year != null ? Math.round(valid[b].year) : "";
+        svg += '<text x="' + (barX + barWidth / 2) + '" y="' + (padding.top + plotHeight + 16) + '" text-anchor="middle" font-size="10" fill="#555">' + yearLabel + "</text>";
+      }
+
+      svg += "</svg>";
+      chartContainer.innerHTML = svg;
+    }
+
+    // Main fetch function. Called when user clicks Search or presses Enter.
+    function fetchAssessmentHistory() {
+      var opaId = opaInput.value.trim();
+
+      // Validate that input is a 9-10 digit number.
+      if (!/^[0-9]{1,10}$/.test(opaId)) {
+        showTableEmpty("Enter a valid numeric OPA account number.");
+        chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">Enter a valid OPA account number above.</p></div>';
+        return;
+      }
+
+      // Show loading state.
+      showTableEmpty("Loading assessment history...");
+      chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">Loading...</p></div>';
+
+      // Build the API URL.
+      var query = buildAssessmentQuery(opaId);
+      var url = CARTO_API_BASE + "?q=" + encodeURIComponent(query);
+
+      fetch(url)
+        .then(function (res) {
+          return res.ok ? res.json() : Promise.reject("API returned status " + res.status);
+        })
+        .then(function (data) {
+          var rows = data.rows || [];
+
+          if (rows.length === 0) {
+            showTableEmpty("No assessment records found for OPA ID " + opaId + ".");
+            chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">No records found for this property.</p></div>';
+            return;
+          }
+
+          // Render the table and chart with fetched data.
+          renderTable(rows);
+          renderChart(rows);
+        })
+        .catch(function (err) {
+console.error("Widget fetch error:", err);
+          showTableEmpty("Failed to load data. Check the OPA ID and try again.");
+          chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">Data unavailable. Try again later.</p></div>';
+        });
+    }
+
+    // Wire up click handler on the Search button.
+    lookupBtn.addEventListener("click", fetchAssessmentHistory);
+
+    // Also trigger fetch on Enter key inside the input.
+    opaInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        fetchAssessmentHistory();
+      }
+    });
+  </script>
+
+  <script>
+    // AUTO-LOOKUP FROM URL PARAMETER
+    document.addEventListener("DOMContentLoaded", function () {
+      // Parse the query string for an OPA account number parameter.
+      const params = new URLSearchParams(window.location.search);
+      const opaParam = params.get("opa");
+
+      // If an OPA ID was passed via URL, pre-fill the input and trigger lookup.
+      if (opaParam && opaParam.trim().length > 0) {
+        const input = document.getElementById("opa-id-input");
+        const button = document.getElementById("lookup-btn");
+        input.value = opaParam.trim();
+        // Trigger the existing click handler on the search button.
+        button.click();
+      }
+    });
+  </script>
 </body>
 
 </html>
