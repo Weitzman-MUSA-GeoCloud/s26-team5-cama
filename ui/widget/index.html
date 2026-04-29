@@ -13,6 +13,8 @@
     href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap"
   />
   <link rel="stylesheet" href="styles.css" />
+  <!-- ApexCharts for the market value bar chart. -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </head>
 
 <body>
@@ -56,14 +58,7 @@
       <!-- Chart Area. Placeholder replaced by bar/line chart (issue #18/#19)
            once user performs lookup and data is fetched from API. -->
       <div class="chart-wrapper">
-        <div class="chart-container" id="valuation-chart">
-          <!-- Shown before a lookup is performed. Hidden once chart renders. -->
-          <div class="chart-placeholder">
-            <p class="chart-placeholder-text">
-              Enter an OPA account number above to view the valuation history chart.
-            </p>
-          </div>
-        </div>
+        <div class="chart-container" id="valuation-chart"></div>
       </div>
 
       <!-- Data Table -->
@@ -144,78 +139,82 @@
       recordCount.textContent = "(" + rows.length + ")";
     }
 
-    // Render a simple bar chart of market value over time.
-    // Uses inline SVG so no charting library dependency is needed.
+    // Holds the active ApexCharts instance so it can be destroyed before re-render.
+    var valuationChart = null;
+
+    // Render a column chart of market value over time using ApexCharts.
     function renderChart(rows) {
       // Sort ascending by year for left-to-right chronological order.
       var sorted = rows.slice().sort(function (a, b) {
         return (a.year || 0) - (b.year || 0);
       });
 
-      // Filter to rows with valid market_value.
+      // Filter to rows with a valid market value.
       var valid = sorted.filter(function (r) {
         return r.market_value != null && r.market_value > 0;
       });
 
       if (valid.length === 0) {
-        chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">No market value data available for this property.</p></div>';
+        chartContainer.innerHTML = "<p class=\"chart-placeholder-text\">No market value data available for this property.</p>";
         return;
       }
 
-      // Compute chart dimensions and scale.
-      var chartWidth = chartContainer.clientWidth || 760;
-      var chartHeight = 200;
-      var padding = { top: 20, right: 20, bottom: 40, left: 70 };
-      var plotWidth = chartWidth - padding.left - padding.right;
-      var plotHeight = chartHeight - padding.top - padding.bottom;
+      // Extract parallel arrays of years and values for ApexCharts.
+      var years = valid.map(function (r) { return String(Math.round(r.year)); });
+      var values = valid.map(function (r) { return Math.round(r.market_value); });
 
-      var maxVal = 0;
-      for (var i = 0; i < valid.length; i++) {
-        if (valid[i].market_value > maxVal) maxVal = valid[i].market_value;
-      }
-      // Add 10% headroom above tallest bar.
-      maxVal = maxVal * 1.1;
-
-      var barGap = 4;
-      var barWidth = Math.max(8, (plotWidth - barGap * (valid.length - 1)) / valid.length);
-      // Cap bar width for readability when few years are present.
-      if (barWidth > 60) barWidth = 60;
-
-      // Recalculate total width used by bars for centering.
-      var totalBarsWidth = valid.length * barWidth + (valid.length - 1) * barGap;
-      var offsetX = padding.left + (plotWidth - totalBarsWidth) / 2;
-
-      // Build SVG string.
-      var svg = '<svg width="' + chartWidth + '" height="' + chartHeight + '" xmlns="http://www.w3.org/2000/svg" style="font-family: Open Sans, Helvetica, Arial, sans-serif;">';
-
-      // Y-axis gridlines and labels (4 ticks).
-      var tickCount = 4;
-      for (var t = 0; t <= tickCount; t++) {
-        var tickVal = (maxVal / tickCount) * t;
-        var tickY = padding.top + plotHeight - (tickVal / maxVal) * plotHeight;
-        // Gridline.
-        svg += '<line x1="' + padding.left + '" y1="' + tickY + '" x2="' + (chartWidth - padding.right) + '" y2="' + tickY + '" stroke="#e0e0e0" stroke-width="1"/>';
-        // Label.
-        var label = tickVal >= 1000000 ? "$" + (tickVal / 1000000).toFixed(1) + "M" : tickVal >= 1000 ? "$" + Math.round(tickVal / 1000) + "K" : "$" + Math.round(tickVal);
-        svg += '<text x="' + (padding.left - 6) + '" y="' + (tickY + 4) + '" text-anchor="end" font-size="10" fill="#888">' + label + "</text>";
+      // Destroy the previous chart instance before creating a new one.
+      // Prevents a double-render when the user performs a second lookup.
+      if (valuationChart !== null) {
+        valuationChart.destroy();
+        valuationChart = null;
       }
 
-      // Bars and x-axis labels.
-      for (var b = 0; b < valid.length; b++) {
-        var barX = offsetX + b * (barWidth + barGap);
-        var barH = (valid[b].market_value / maxVal) * plotHeight;
-        var barY = padding.top + plotHeight - barH;
+      // Clear any placeholder text left in the container.
+      chartContainer.innerHTML = "";
 
-        // Bar rectangle.
-        svg += '<rect x="' + barX + '" y="' + barY + '" width="' + barWidth + '" height="' + barH + '" fill="#2C3968" rx="2"/>';
+      // Configure and render the ApexCharts column chart.
+      var options = {
+        chart: {
+          type: "bar",
+          height: 220,
+          toolbar: { show: false },
+          fontFamily: "Open Sans, Helvetica, Arial, sans-serif",
+        },
+        series: [{ name: "Market Value", data: values }],
+        xaxis: {
+          categories: years,
+          labels: { style: { colors: "#555", fontSize: "10px" } },
+        },
+        yaxis: {
+          labels: {
+            // Format y-axis ticks as abbreviated USD (e.g. $250K, $1.2M).
+            formatter: function (val) {
+              if (val >= 1000000) return "$" + (val / 1000000).toFixed(1) + "M";
+              if (val >= 1000) return "$" + Math.round(val / 1000) + "K";
+              return "$" + Math.round(val);
+            },
+            style: { colors: "#888", fontSize: "10px" },
+          },
+        },
+        tooltip: {
+          // Show the full dollar amount on hover.
+          y: {
+            formatter: function (val) {
+              return "$" + val.toLocaleString();
+            },
+          },
+        },
+        colors: ["#2C3968"],
+        plotOptions: {
+          bar: { borderRadius: 2, columnWidth: "60%" },
+        },
+        dataLabels: { enabled: false },
+        grid: { borderColor: "#e0e0e0" },
+      };
 
-        // Year label below bar.
-        var yearLabel = valid[b].year != null ? Math.round(valid[b].year) : "";
-        svg += '<text x="' + (barX + barWidth / 2) + '" y="' + (padding.top + plotHeight + 16) + '" text-anchor="middle" font-size="10" fill="#555">' + yearLabel + "</text>";
-      }
-
-      svg += "</svg>";
-      chartContainer.innerHTML = svg;
+      valuationChart = new ApexCharts(chartContainer, options);
+      valuationChart.render();
     }
 
     // Main fetch function. Called when user clicks Search or presses Enter.
@@ -225,13 +224,14 @@
       // Validate that input is a 9-10 digit number.
       if (!/^[0-9]{1,10}$/.test(opaId)) {
         showTableEmpty("Enter a valid numeric OPA account number.");
-        chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">Enter a valid OPA account number above.</p></div>';
+        chartContainer.innerHTML = "<p class=\"chart-placeholder-text\">Enter a valid OPA account number above.</p>";
         return;
       }
 
       // Show loading state.
       showTableEmpty("Loading assessment history...");
-      chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">Loading...</p></div>';
+      if (valuationChart !== null) { valuationChart.destroy(); valuationChart = null; }
+      chartContainer.innerHTML = "<p class=\"chart-placeholder-text\">Loading...</p>";
 
       // Build the API URL.
       var query = buildAssessmentQuery(opaId);
@@ -246,7 +246,7 @@
 
           if (rows.length === 0) {
             showTableEmpty("No assessment records found for OPA ID " + opaId + ".");
-            chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">No records found for this property.</p></div>';
+            chartContainer.innerHTML = "<p class=\"chart-placeholder-text\">No records found for this property.</p>";
             return;
           }
 
@@ -257,7 +257,7 @@
         .catch(function (err) {
 console.error("Widget fetch error:", err);
           showTableEmpty("Failed to load data. Check the OPA ID and try again.");
-          chartContainer.innerHTML = '<div class="chart-placeholder"><p class="chart-placeholder-text">Data unavailable. Try again later.</p></div>';
+          chartContainer.innerHTML = "<p class=\"chart-placeholder-text\">Data unavailable. Try again later.</p>";
         });
     }
 
